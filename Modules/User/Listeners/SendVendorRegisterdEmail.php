@@ -1,0 +1,83 @@
+<?php
+
+namespace Modules\User\Listeners;
+
+use Illuminate\Support\Facades\Mail;
+use Modules\User\Emails\RegisteredEmail;
+use Modules\User\Emails\VendorRegisteredEmail;
+use Modules\User\Events\NewVendorRegistered;
+
+class SendVendorRegisterdEmail
+{
+    const CODE = [
+        'first_name'    => '[first_name]',
+        'last_name'     => '[last_name]',
+        'name'          => '[name]',
+        'email'         => '[email]',
+        'created_at'    => '[created_at]',
+        'link_approved' => '[link_approved]',
+        'button_verify' => '[button_verify]',
+    ];
+
+    // constructor এ কোনো dependency নেই
+    public function __construct()
+    {
+    }
+
+    public function handle(NewVendorRegistered $event)
+    {
+        $user = $event->user;
+        if (!$user || !$user->email) return;
+
+        if ($user->locale) {
+            $old = app()->getLocale();
+            app()->setLocale($user->locale);
+        }
+
+        // ── Customer কে mail ──────────────────────────────────────────────────
+        if (!empty(setting_item('enable_mail_vendor_registered'))) {
+            $body = $this->replaceContentEmail($event, setting_item_with_lang('vendor_content_email_registered', app()->getLocale()));
+            Mail::to($user->email)->send(new RegisteredEmail($user, $body, 'customer'));
+        }
+
+        if (!empty($old)) {
+            app()->setLocale($old);
+        }
+
+        // ── Admin কে mail ─────────────────────────────────────────────────────
+        $adminEmail = setting_item('admin_email');
+        if (
+            !empty($adminEmail) &&
+            !empty(setting_item('admin_enable_mail_vendor_registered')) &&
+            setting_item_with_lang('admin_content_email_vendor_registered', app()->getLocale())
+        ) {
+            $body = $this->replaceContentEmail($event, setting_item_with_lang('admin_content_email_vendor_registered', app()->getLocale()));
+            Mail::to($adminEmail)->send(new VendorRegisteredEmail($user, $body, 'admin'));
+        }
+    }
+
+    public function replaceContentEmail($event, $content)
+    {
+        if (!empty($content)) {
+            foreach (self::CODE as $item => $value) {
+                if ($item === 'link_approved') {
+                    $content = str_replace($value, "<a href='" . route('user.admin.upgrade') . "'>" . route('user.admin.upgrade') . "</a>", $content);
+                } elseif ($item === 'button_verify') {
+                    $content = str_replace($value, $this->buttonVerify($event), $content);
+                } else {
+                    $content = str_replace($value, @$event->user->$item, $content);
+                }
+            }
+        }
+        return $content;
+    }
+
+    public function buttonVerify($event)
+    {
+        if (!$event->user->hasVerifiedEmail()) {
+            $text = __('Verify Email Address');
+            return '<a style="border-radius:3px;color:#fff;display:inline-block;text-decoration:none;background-color:#3490dc;border-top:10px solid #3490dc;border-right:18px solid #3490dc;border-bottom:10px solid #3490dc;border-left:18px solid #3490dc;" href="' . $event->user->verificationUrl() . '">' . $text . '</a>';
+        }
+        return '';
+    }
+}

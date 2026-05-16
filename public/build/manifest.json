@@ -1,0 +1,11 @@
+{
+  "resources/js/flight-search-app.js": {
+    "file": "assets/flight-search-app-fUEfIh-k.js",
+    "name": "flight-search-app",
+    "src": "resources/js/flight-search-app.js",
+    "isEntry": true,
+    "css": [
+      "assets/flight-search-app-CqPLX3fk.css"
+    ]
+  }
+}

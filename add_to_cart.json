@@ -1,0 +1,90 @@
+{
+    "service_id": 61,
+    "service_type": "flight",
+    "flight_seat": [
+        {
+            "id": 181,
+            "price": "6224.00",
+            "max_passengers": 100,
+            "flight_id": 61,
+            "seat_type": {
+                "id": 2,
+                "code": "Economy",
+                "name": "Economy",
+                "create_user": 6,
+                "update_user": 6,
+                "deleted_at": null,
+                "created_at": "2024-10-15T01:28:46.000000Z",
+                "updated_at": "2024-11-21T09:53:39.000000Z",
+                "author_id": null
+            },
+            "person": "adult",
+            "baggage_check_in": 20,
+            "baggage_cabin": 10,
+            "create_user": 6,
+            "update_user": 6,
+            "created_at": "2024-11-02T10:06:51.000000Z",
+            "updated_at": "2024-11-21T10:16:38.000000Z",
+            "deleted_at": null,
+            "author_id": null,
+            "price_html": "৳6.224",
+            "number": 1
+        },
+        {
+            "id": 183,
+            "price": "6750.00",
+            "max_passengers": 30,
+            "flight_id": 61,
+            "seat_type": {
+                "id": 4,
+                "code": "PremiumEconomy",
+                "name": "Premium Economy",
+                "create_user": 6,
+                "update_user": 6,
+                "deleted_at": null,
+                "created_at": "2024-10-15T01:28:46.000000Z",
+                "updated_at": "2024-11-21T09:54:14.000000Z",
+                "author_id": null
+            },
+            "person": "adult",
+            "baggage_check_in": 20,
+            "baggage_cabin": 10,
+            "create_user": 6,
+            "update_user": 6,
+            "created_at": "2024-11-02T10:08:33.000000Z",
+            "updated_at": "2024-11-21T10:17:10.000000Z",
+            "deleted_at": null,
+            "author_id": null,
+            "price_html": "৳6.750",
+            "number": 2
+        },
+        {
+            "id": 182,
+            "price": "7000.00",
+            "max_passengers": 50,
+            "flight_id": 61,
+            "seat_type": {
+                "id": 5,
+                "code": "Business",
+                "name": "Business",
+                "create_user": 6,
+                "update_user": 6,
+                "deleted_at": null,
+                "created_at": "2024-10-15T01:28:46.000000Z",
+                "updated_at": "2024-11-21T09:54:34.000000Z",
+                "author_id": null
+            },
+            "person": "adult",
+            "baggage_check_in": 20,
+            "baggage_cabin": 10,
+            "create_user": 6,
+            "update_user": 6,
+            "created_at": "2024-11-02T10:07:53.000000Z",
+            "updated_at": "2024-11-21T10:17:25.000000Z",
+            "deleted_at": null,
+            "author_id": null,
+            "price_html": "৳7.000",
+            "number": 1
+        }
+    ]
+}

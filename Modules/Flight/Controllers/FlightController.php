@@ -114,12 +114,12 @@ class FlightController extends Controller
                 return redirect()->back()->withErrors($tripValidationErrors)->withInput();
             }
         }
-
+        SearchSession::log($validated);
         // ✅ Streaming response
         if ($request->expectsJson() || $request->ajax()) {
             session(['flight_search_params' => $validated]);
             return response()->stream(function () use ($validated) {
-                
+
 
                 $this->flightSearch->searchStream($validated, function ($flight) {
                     echo "data: " . json_encode($flight) . "\n\n";

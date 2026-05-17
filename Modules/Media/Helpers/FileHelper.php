@@ -289,8 +289,15 @@ class FileHelper
             </div>
             <div class="attach-demo" title="Change file">
                 <?php if (!empty($file)) {
-                    printf('<img src="%s" class="image-responsive">', FileHelper::url($oldValue, 'thumb'));
+                    if (self::isImage($file)) {
+                        printf('<img src="%s" class="image-responsive">', FileHelper::url($oldValue, 'thumb'));
+                    } else {
+                        printf('<a href="%s" target="_blank" class="btn btn-default" style="display:block;text-align:center;padding:15px;border:1px solid #ddd;border-radius:4px;background:#f9f9f9;"><i class="fa fa-file-pdf-o" style="font-size:36px;display:block;margin-bottom:8px;"></i> %s</a>', FileHelper::url($oldValue, 'full', false), $file->file_name);
+                    }
                 } ?>
+<!--                --><?php //if (!empty($file)) {
+//                    printf('<img src="%s" class="image-responsive">', FileHelper::url($oldValue, 'thumb'));
+//                } ?>
             </div>
             <div class="upload-actions justify-content-between" v-show="value">
                 <?php

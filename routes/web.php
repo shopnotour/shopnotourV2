@@ -73,14 +73,14 @@ Route::get('social-callback/{provider}', 'Auth\LoginController@socialCallBack');
 // Logs
 Route::get(config('admin.admin_route_prefix') . '/logs', '\Rap2hpoutre\LaravelLogViewer\LogViewerController@index')->middleware(['auth', 'dashboard', 'system_log_view'])->name('admin.logs');
 
-Route::get('/install', 'InstallerController@redirectToRequirement')->name('LaravelInstaller::welcome');
-Route::get('/install/environment', 'InstallerController@redirectToWizard')->name('LaravelInstaller::environment');
+//Route::get('/install', 'InstallerController@redirectToRequirement')->name('LaravelInstaller::welcome');
+//Route::get('/install/environment', 'InstallerController@redirectToWizard')->name('LaravelInstaller::environment');
 Route::fallback([\Modules\Core\Controllers\FallbackController::class, 'FallBack']);
 
 // Hide page update default
-Route::get('/update', 'InstallerController@redirectToHome');
-Route::get('/update/overview', 'InstallerController@redirectToHome');
-Route::get('/update/database', 'InstallerController@redirectToHome');
+//Route::get('/update', 'InstallerController@redirectToHome');
+//Route::get('/update/overview', 'InstallerController@redirectToHome');
+//Route::get('/update/database', 'InstallerController@redirectToHome');
 
 
 // SSLCOMMERZ Start

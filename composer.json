@@ -36,7 +36,6 @@
         "payrexx/payrexx": "dev-master",
         "propaganistas/laravel-phone": "^5.1",
         "pusher/pusher-php-server": "^7.0",
-        "rachidlaasri/laravel-installer": "^4.0",
         "rap2hpoutre/laravel-log-viewer": "^2.2.0",
         "sarowar/bkash": "^1.0",
         "simplesoftwareio/simple-qrcode": "^4.2.0",

@@ -22,33 +22,144 @@ class UserController extends AdminController
         $this->setActiveMenu(route('user.admin.index'));
     }
 
+//    public function index(Request $request)
+//    {
+//        $this->checkPermission('user_view');
+//        $username = $request->query('s');
+//        $listUser = User::query()->orderBy('id','desc');
+//        if (!empty($username)) {
+//             $listUser->where(function($query) use($username){
+//                 $query->where('first_name', 'LIKE', '%' . $username . '%');
+//                 $query->orWhere('business_name', 'LIKE', '%' . $username . '%');
+//                 $query->orWhere('id',  $username);
+//                 $query->orWhere('phone',  $username);
+//                 $query->orWhere('email', 'LIKE', '%' . $username . '%');
+//                 $query->orWhere('last_name', 'LIKE', '%' . $username . '%');
+//                 $query->orWhere(DB::raw("CONCAT(first_name,' ',last_name)"), 'LIKE', '%' . $username . '%');
+//             });
+//        }
+//        if($request->query('role')){
+//            $listUser->role($request->query('role'));
+//        }
+//        //$listUser->with(['wallet']);
+//        $data = [
+//            'rows' => $listUser->paginate(20),
+//            'roles' => Role::all()
+//        ];
+//        return view('User::admin.index', $data);
+//    }
+
+
     public function index(Request $request)
     {
         $this->checkPermission('user_view');
-        $username = $request->query('s');
-        $listUser = User::query()->orderBy('id','desc');
-        if (!empty($username)) {
-             $listUser->where(function($query) use($username){
-                 $query->where('first_name', 'LIKE', '%' . $username . '%');
-                 $query->orWhere('business_name', 'LIKE', '%' . $username . '%');
-                 $query->orWhere('id',  $username);
-                 $query->orWhere('phone',  $username);
-                 $query->orWhere('email', 'LIKE', '%' . $username . '%');
-                 $query->orWhere('last_name', 'LIKE', '%' . $username . '%');
-                 $query->orWhere(DB::raw("CONCAT(first_name,' ',last_name)"), 'LIKE', '%' . $username . '%');
-             });
+
+        // ✅ ajax() এর বদলে এটা use করুন
+        if ($request->has('draw')) {
+
+            $username = $request->input('search.value');
+            $role     = $request->query('role');
+
+            $query = User::query();
+
+            if (!empty($username)) {
+                $query->where(function ($q) use ($username) {
+                    $q->where('first_name', 'LIKE', '%' . $username . '%')
+                        ->orWhere('last_name',     'LIKE', '%' . $username . '%')
+                        ->orWhere('business_name', 'LIKE', '%' . $username . '%')
+                        ->orWhere('email',         'LIKE', '%' . $username . '%')
+                        ->orWhere('phone',         $username)
+                        ->orWhereRaw("CONCAT(first_name,' ',last_name) LIKE ?", ['%' . $username . '%']);
+                    if (is_numeric($username)) {
+                        $q->orWhere('id', $username);
+                    }
+                });
+            }
+
+            if (!empty($role)) {
+                $query->role($role);
+            }
+
+            $totalRecords    = User::count();
+            $filteredRecords = $query->count();
+            $start           = (int) $request->query('start', 0);
+            $length          = (int) $request->query('length', 20);
+
+            $users = $query->orderBy('id', 'desc')
+                ->skip($start)
+                ->take($length)
+                ->get();
+
+            $data = $users->map(function ($row) {
+                $verified = $row->email_verified_at
+                    ? ' <i class="fa fa-check-circle text-success"></i>'
+                    : ' <i class="fa fa-info-circle text-warning"></i>';
+
+                $refHtml = $row->reference_id
+                    ? '<span class="badge badge-info">' . $row->reference_id . '</span>'
+                    : '<span class="badge badge-secondary">Not Set</span>';
+
+                return [
+                    'id'         => $row->id,
+                    'name'       => '<a href="' . route('user.admin.detail', ['id' => $row->id]) . '">' . e($row->getDisplayName()) . '</a>',
+                    'email'      => e($row->email) . $verified,
+                    'balance'    => $row->balance,
+                    'phone'      => e($row->phone ?? ''),
+                    'role'       => $row->role->name ?? '',
+                    'created_at' => display_date($row->created_at),
+                    'reference'  => $refHtml,
+                    'actions'    => $this->buildActionDropdown($row),
+                ];
+            });
+
+            return response()->json([
+                'draw'            => intval($request->query('draw')),
+                'recordsTotal'    => $totalRecords,
+                'recordsFiltered' => $filteredRecords,
+                'data'            => $data,
+            ]);
         }
-        if($request->query('role')){
-            $listUser->role($request->query('role'));
-        }
-        //$listUser->with(['wallet']);
-        $data = [
-            'rows' => $listUser->paginate(20),
-            'roles' => Role::all()
-        ];
-        return view('User::admin.index', $data);
+
+        // Normal page load
+        return view('User::admin.index', [
+            'roles' => Role::all(),
+            'rows'  => collect(),
+        ]);
     }
 
+// Action dropdown আলাদা method এ রাখলে index পরিষ্কার থাকে
+    private function buildActionDropdown($row): string
+    {
+        $editUrl     = route('user.admin.detail',          ['id' => $row->id]);
+        $passUrl     = route('user.admin.password',        ['id' => $row->id]);
+        $creditUrl   = route('user.admin.wallet.addCredit',['id' => $row->id]);
+        $creditList  = route('user.admin.wallet.list',     ['id' => $row->id]);
+        $verifyUrl   = route('user.admin.verifyEmail', $row);
+
+        $verifyBtn = $row->hasVerifiedEmail()
+            ? '<a class="dropdown-item" href="#"><i class="fa fa-check"></i> ' . __('Email verified') . '</a>'
+            : '<a class="dropdown-item" href="' . $verifyUrl . '"><i class="fa fa-edit"></i> ' . __('Verify email') . '</a>';
+
+        return '
+        <div class="dropdown">
+            <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-toggle="dropdown">
+                <i class="fa fa-th"></i>
+            </button>
+            <div class="dropdown-menu">
+                <a class="dropdown-item" href="' . $editUrl . '"><i class="fa fa-edit"></i> ' . __('Edit') . '</a>
+                ' . $verifyBtn . '
+                <a class="dropdown-item" href="' . $passUrl . '"><i class="fa fa-lock"></i> ' . __('Change Password') . '</a>
+                <a class="dropdown-item" href="' . $creditUrl . '"><i class="fa fa-plus"></i> ' . __('Add Credit') . '</a>
+                <a class="dropdown-item" href="' . $creditList . '"><i class="fa fa-list"></i> ' . __('Credit List') . '</a>
+                <a href="#" class="dropdown-item set-reference-btn"
+                   data-user-id="' . $row->id . '"
+                   data-user-name="' . e($row->getDisplayName()) . '"
+                   data-toggle="modal" data-target="#referenceModal">
+                    <i class="fa fa-user"></i> ' . __('Set Reference') . '
+                </a>
+            </div>
+        </div>';
+    }
     public function create(Request $request)
     {
 
@@ -173,8 +284,8 @@ class UserController extends AdminController
             'first_name'              => 'required|max:255',
             'last_name'              => 'required|max:255',
             'business_name'              => 'required|max:255',
-            'status'              => 'nullable|required|max:50',
-            'role_id'              => 'nullable|required|max:11',
+//            'status'              => 'nullable|required|max:50',
+//            'role_id'              => 'nullable|required|max:11',
             'email'              =>[
                 'required',
                 'email',

@@ -395,7 +395,7 @@
                             @php
                                 $agencyFiles = [
                                     ['label' => __('Trade License'),    'name' => 'trade_license_file',    'id_field' => 'trade_license_file_id'],
-                                    ['label' => __('IATA Certificate'), 'name' => 'iata_file',              'id_field' => 'iata_file_id'],
+                                   ['label' => __('IATA Certificate/NID'), 'name' => 'iata_file',              'id_field' => 'iata_file_id'],
                                     ['label' => __('Civil Aviation'),   'name' => 'civil_aviation_file',   'id_field' => 'civil_aviation_file_id'],
                                 ];
                             @endphp

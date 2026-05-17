@@ -22,7 +22,7 @@ class ModuleProvider extends ModuleServiceProvider
             "ai_text_generate"
         ]);
 
-        add_action('ADMIN_JS_STACK', [$this, '__addJs']);
+//        add_action('ADMIN_JS_STACK', [$this, '__addJs']);
 
         $this->app->singleton(AiDriver::class, function () {
             $settings = config('ai.providers');

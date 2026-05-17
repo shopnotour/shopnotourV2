@@ -1,68 +1,74 @@
 # Shopno Tour V2 — Local Setup Guide
 
 ## Requirements
-- PHP 8.1+
+- PHP 8.1+ (XAMPP recommended)
 - Composer
 - MySQL
-- Node.js & NPM
+- Git
 
 ---
 
-## Quick Setup (Windows)
+## Setup Steps
 
-Clone করার পর PowerShell এ run করুন:
-
-```powershell
-.\setup.ps1
-```
-
-তারপর:
-1. `.env` file এ database credentials দিন
-2. Database import করুন
-3. `php artisan serve` চালান
-
----
-
-## Manual Setup (Step by Step)
-
-**1. Clone the repository**
+### 1. Clone the repository
 ```bash
-git clone <repository-url>
+git clone https://github.com/shopnotour/shopnotourV2.git
 cd shopnotourV2
 ```
 
-**2. Install PHP dependencies**
-```bash
+### 2. Set PHP path (if needed)
+If `php --version` shows error, run this in PowerShell:
+```powershell
+$env:PATH = "C:\xampp\php;" + $env:PATH
+php --version
+```
+
+### 3. Install PHP dependencies
+```powershell
 composer install
 ```
 
-**3. Environment setup**
-```bash
+### 4. Create storage directories
+```powershell
+mkdir storage\framework\sessions, storage\framework\cache\data, storage\framework\views, storage\logs, storage\app\public
+```
+
+### 5. Environment setup
+```powershell
 cp .env.example .env
 php artisan key:generate
 ```
 
-**4. Configure `.env` file**
-
-`.env` file খুলুন এবং database credentials দিন:
+### 6. Configure `.env` file
+Edit `.env` and set your database credentials:
 ```
 DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_DATABASE=your_database_name
-DB_USERNAME=your_db_username
-DB_PASSWORD=your_db_password
+DB_USERNAME=root
+DB_PASSWORD=
+
+BC_ACTIVE_THEME=GoTrip
 ```
 
-**5. Import the database**
-
-phpMyAdmin দিয়ে অথবা terminal এ:
+### 7. Import the database
+Import the provided `.sql` file into your MySQL using phpMyAdmin or terminal:
 ```bash
 mysql -u root -p your_database_name < database.sql
 ```
 
-**6. Storage permission & link**
+### 8. Extract uploads
+Download `uploads.zip` from shared Google Drive and extract into `public/` folder:
+```powershell
+Expand-Archive -Path public\uploads.zip -DestinationPath public\
+```
 
-PowerShell এ run করুন:
+### 9. Mark as installed
+```powershell
+echo $null > storage\installed
+```
+
+### 10. Set storage permissions
 ```powershell
 $folders = @("storage", "bootstrap\cache")
 foreach ($folder in $folders) {
@@ -73,18 +79,20 @@ foreach ($folder in $folders) {
     $acl.SetAccessRule($rule)
     Set-Acl $folder $acl
 }
+```
 
+### 11. Storage link
+```powershell
 php artisan storage:link
 ```
 
-**7. Install frontend dependencies**
-```bash
-npm install
-npm run dev
+### 12. Clear cache
+```powershell
+php artisan optimize:clear
 ```
 
-**8. Run the project**
-```bash
+### 13. Run the project
+```powershell
 php artisan serve
 ```
 
@@ -93,7 +101,9 @@ Visit: http://127.0.0.1:8000
 ---
 
 ## Notes
-- `.env` file কখনো git এ push করবেন না
-- Clone করার পর সবসময় `composer install` চালাতে হবে (`vendor/` folder git এ নেই)
-- Database `.sql` file আলাদাভাবে share করা হবে
-- Storage folder এ write permission থাকতে হবে
+- Never commit your `.env` file
+- `vendor/` folder is not in git — always run `composer install` after cloning
+- `public/uploads/` is not in git — download from shared Google Drive link
+- `storage/installed` file must exist for the app to work properly
+- `BC_ACTIVE_THEME=GoTrip` must be set in `.env`
+- If images are not showing, make sure `uploads.zip` is extracted properly

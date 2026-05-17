@@ -211,6 +211,7 @@
 
     <script>
         window.isLoggedIn = {{ Auth::check() ? 'true' : 'false' }};
+        window.userRoleId = {{ Auth::check() ? Auth::user()->role_id : 'null' }};
         window.flightData = {
             flights:      @json($flights ?? []),
             searchParams: @json($searchParams ?? []),

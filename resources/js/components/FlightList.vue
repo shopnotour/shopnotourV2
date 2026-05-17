@@ -364,8 +364,25 @@
         <!-- Sort + count bar -->
         <div class="fl-sort-bar">
             <div class="fl-count">
-                <strong>{{ flights.length }}</strong>
+                <strong>{{ filteredFlights.length }}</strong>
                 <span> flights</span>
+                <span v-if="filteredFlights.length > 0" class="pagination-info">
+                    (Page {{ currentPage }} of {{ totalPages }})
+                </span>
+            </div>
+            <!-- Center navigation buttons -->
+            <div class="fl-day-nav">
+                <button @click="goPrevDay" class="day-btn">
+                    <i class="fa-solid fa-less-than"></i>
+                    <i class="fa-solid fa-less-than"></i>
+                    Prev Day
+                </button>
+
+                <button @click="goNextDay" class="day-btn">
+                    Next Day
+                    <i class="fa-solid fa-greater-than"></i>
+                    <i class="fa-solid fa-greater-than"></i>
+                </button>
             </div>
             <div class="fl-sort-select">
                 <i class="fa fa-sort"></i>
@@ -408,8 +425,8 @@
         </div>
 
         <!-- Flight cards -->
-        <div v-if="sortedFlights.length" class="fl-list">
-            <FlightCard v-for="(f, fi) in sortedFlights" :key="'fl-' + fi + '-' + (f.id || fi)" :flight="f" />
+        <div v-if="paginatedFlights.length" class="fl-list">
+            <FlightCard v-for="(f, fi) in paginatedFlights" :key="'fl-' + fi + '-' + (f.id || fi)" :flight="f" />
         </div>
 
         <!-- Empty state -->
@@ -417,6 +434,45 @@
             <div class="fl-empty-icon"><i class="fa fa-plane-slash"></i></div>
             <h3>No flights found</h3>
             <p>Try adjusting your filters</p>
+        </div>
+
+        <!-- Pagination -->
+        <div v-if="totalPages > 1" class="pagination">
+            <button
+                @click="goToPage(1)"
+                :disabled="currentPage === 1"
+                class="page-btn">
+                <i class="fa fa-angle-double-left"></i>
+            </button>
+            <button
+                @click="goToPage(currentPage - 1)"
+                :disabled="currentPage === 1"
+                class="page-btn">
+                <i class="fa fa-angle-left"></i>
+            </button>
+
+            <div class="page-numbers">
+                <button
+                    v-for="page in displayedPages"
+                    :key="page"
+                    @click="goToPage(page)"
+                    :class="['page-number', { active: currentPage === page }]">
+                    {{ page }}
+                </button>
+            </div>
+
+            <button
+                @click="goToPage(currentPage + 1)"
+                :disabled="currentPage === totalPages"
+                class="page-btn">
+                <i class="fa fa-angle-right"></i>
+            </button>
+            <button
+                @click="goToPage(totalPages)"
+                :disabled="currentPage === totalPages"
+                class="page-btn">
+                <i class="fa fa-angle-double-right"></i>
+            </button>
         </div>
     </div>
 </template>
@@ -430,12 +486,22 @@ export default {
         flights:         { type: Array,  required: true },
         airlineChips:    { type: Array,  default: () => [] },
         selectedAirline: { type: String, default: '' },
-        cheapestPrice:   { type: Number, default: 0 }
+        cheapestPrice:   { type: Number, default: 0 },
     },
-    data() { return { sortBy: 'cheapest', showLeft: false, showRight: false }; },
+    data() {
+        return {
+            sortBy: 'cheapest',
+            showLeft: false,
+            showRight: false,
+            showDiscount: false,
+            isLoggedIn: window.isLoggedIn === true,
+            currentPage: 1,
+            itemsPerPage: 20
+        };
+    },
     computed: {
         sortedFlights() {
-            const f = [...this.flights];
+            const f = [...this.filteredFlights];
             switch (this.sortBy) {
                 case 'fastest':   return f.sort((a,b) => (a.legs?.[0]?.duration||0)-(b.legs?.[0]?.duration||0));
                 case 'earliest':  return f.sort((a,b) => (a.legs?.[0]?.departure?.time||'').localeCompare(b.legs?.[0]?.departure?.time||''));
@@ -443,11 +509,69 @@ export default {
                 case 'recommended': return f.sort((a,b) => { const sa=(a.price?.total||0)/1000+(a.legs?.[0]?.duration||0)/60, sb=(b.price?.total||0)/1000+(b.legs?.[0]?.duration||0)/60; return sa-sb; });
                 default: return f.sort((a,b) => (parseFloat(a.price?.total)||0)-(parseFloat(b.price?.total)||0));
             }
+        },
+        filteredFlights() {
+            if (!this.selectedAirline) return this.flights;
+            return this.flights.filter(flight => {
+                const airlineCode = flight.airline?.code || flight.segments?.[0]?.airline?.code;
+                return airlineCode === this.selectedAirline;
+            });
+        },
+        totalPages() {
+            return Math.ceil(this.sortedFlights.length / this.itemsPerPage);
+        },
+        paginatedFlights() {
+            const start = (this.currentPage - 1) * this.itemsPerPage;
+            const end = start + this.itemsPerPage;
+            return this.sortedFlights.slice(start, end);
+        },
+        displayedPages() {
+            const delta = 2;
+            const range = [];
+            const rangeWithDots = [];
+            let l;
+
+            for (let i = 1; i <= this.totalPages; i++) {
+                if (i === 1 || i === this.totalPages || (i >= this.currentPage - delta && i <= this.currentPage + delta)) {
+                    range.push(i);
+                }
+            }
+
+            range.forEach((i) => {
+                if (l) {
+                    if (i - l === 2) {
+                        rangeWithDots.push(l + 1);
+                    } else if (i - l !== 1) {
+                        rangeWithDots.push('...');
+                    }
+                }
+                rangeWithDots.push(i);
+                l = i;
+            });
+
+            return rangeWithDots;
+        }
+    },
+    watch: {
+        sortBy() {
+            this.currentPage = 1;
+        },
+        selectedAirline() {
+            this.currentPage = 1;
+        },
+        flights() {
+            this.currentPage = 1;
         }
     },
     methods: {
-        selectAirline(code) { this.$emit('airline-select', code); },
-        fmt(p) { if (!p) return '0'; const v=parseInt(p); return v>=1000 ? Math.round(v/1000)+'K' : v.toString(); },
+        selectAirline(code) {
+            this.$emit('airline-select', code);
+        },
+        fmt(p) {
+            if (!p) return '0';
+            const v=parseInt(p);
+            return v>=1000 ? Math.round(v/1000)+'K' : v.toString();
+        },
         updateArrows() {
             this.$nextTick(() => {
                 const el = this.$refs.chipsScroll;
@@ -461,6 +585,47 @@ export default {
             if (!el) return;
             el.scrollBy({ left: dir === 'right' ? 240 : -240, behavior: 'smooth' });
             setTimeout(() => this.updateArrows(), 350);
+        },
+        goPrevDay() {
+            this.changeDay(-1);
+        },
+        goNextDay() {
+            this.changeDay(1);
+        },
+        changeDay(days) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const segmentsCount = parseInt(urlParams.get('segments_count')) || 1;
+
+            for (let i = 0; i < segmentsCount; i++) {
+                const departureParam = `segments[${i}][departure]`;
+                let currentDate = urlParams.get(departureParam);
+
+                if (currentDate) {
+                    const newDate = new Date(currentDate);
+                    newDate.setDate(newDate.getDate() + days);
+                    urlParams.set(departureParam, newDate.toISOString().split('T')[0]);
+                }
+            }
+
+            const tripType = urlParams.get('trip_type');
+            if (tripType === 'round') {
+                const returnDate = urlParams.get('return_date');
+                if (returnDate) {
+                    const newReturnDate = new Date(returnDate);
+                    newReturnDate.setDate(newReturnDate.getDate() + days);
+                    urlParams.set('return_date', newReturnDate.toISOString().split('T')[0]);
+                }
+            }
+
+            window.location.href = `${window.location.pathname}?${urlParams.toString()}`;
+        },
+        goToPage(page) {
+            if (page >= 1 && page <= this.totalPages && page !== this.currentPage) {
+                this.currentPage = page;
+                this.$nextTick(() => {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+            }
         }
     },
     mounted() {
@@ -471,9 +636,14 @@ export default {
             this.$nextTick(() => { if (this.$refs.chipsScroll) this._ro.observe(this.$refs.chipsScroll); });
         }
     },
-    beforeDestroy() { this._ro?.disconnect(); },
+    beforeDestroy() {
+        this._ro?.disconnect();
+    },
     watch: {
-        airlineChips() { this.$nextTick(() => this.updateArrows()); setTimeout(() => this.updateArrows(), 200); }
+        airlineChips() {
+            this.$nextTick(() => this.updateArrows());
+            setTimeout(() => this.updateArrows(), 200);
+        }
     }
 };
 </script>
@@ -498,11 +668,39 @@ export default {
     margin-bottom: 10px;
     position: sticky;
     top: 0;
-    z-index: 200;   /* ✅ raised above form section overflow */
+    z-index: 200;
     box-shadow: 0 2px 8px rgba(0,0,0,.08);
 }
+
+.fl-day-nav {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.day-btn {
+    padding: 5px 10px;
+    border: 1px solid #ddd;
+    background: #DBEAFE;
+    cursor: pointer;
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+.day-btn:hover {
+    background: #13357B;
+    color: #fff;
+}
+
 .fl-count strong { font-size: 15px; font-weight: 800; color: var(--fl-blue); }
 .fl-count span   { font-size: 13px; color: #6b7280; }
+
+.pagination-info {
+    margin-left: 8px;
+    font-size: 11px;
+    color: #9ca3af;
+}
+
 .fl-sort-select {
     display: flex;
     align-items: center;
@@ -510,6 +708,7 @@ export default {
     font-size: 13px;
     color: #374151;
 }
+
 .fl-sort-select i { color: var(--fl-blue); }
 .fl-sort-select select {
     border: 1.5px solid var(--fl-border);
@@ -534,8 +733,9 @@ export default {
     overflow: hidden;
     box-shadow: 0 1px 4px rgba(0,0,0,.05);
     position: relative;
-    z-index: 199;   /* ✅ below sort bar, above form collapse overlay */
+    z-index: 199;
 }
+
 .fl-chips-arrow {
     flex-shrink: 0;
     width: 32px;
@@ -545,9 +745,12 @@ export default {
     cursor: pointer;
     font-size: 12px;
     color: #4b5563;
-    display: flex; align-items: center; justify-content: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     transition: all .2s;
 }
+
 .fl-chips-arrow.left  { border-right: 1px solid var(--fl-border); }
 .fl-chips-arrow.right { border-left:  1px solid var(--fl-border); }
 .fl-chips-arrow:hover { background: #eff6ff; color: var(--fl-blue); }
@@ -561,6 +764,7 @@ export default {
     flex: 1;
     -webkit-overflow-scrolling: touch;
 }
+
 .fl-chips-scroll::-webkit-scrollbar { display: none; }
 
 .fl-chip {
@@ -578,24 +782,84 @@ export default {
     background: #fafafa;
     user-select: none;
 }
-.fl-chip:hover { border-color: var(--fl-blue); background: #eff6ff; transform: translateY(-1px); }
-.fl-chip.active { border-color: var(--fl-blue); border-width: 2px; background: #dbeafe; box-shadow: 0 0 0 2px rgba(29,78,216,.15); }
+
+.fl-chip:hover {
+    border-color: var(--fl-blue);
+    background: #eff6ff;
+    transform: translateY(-1px);
+}
+
+.fl-chip.active {
+    border-color: var(--fl-blue);
+    border-width: 2px;
+    background: #dbeafe;
+    box-shadow: 0 0 0 2px rgba(29,78,216,.15);
+}
 
 .fl-chip-logo {
-    width: 40px; height: 28px;
+    width: 40px;
+    height: 28px;
     border-radius: 5px;
-    display: flex; align-items: center; justify-content: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 15px;
 }
-.fl-chip-logo.all      { background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: #fff; }
-.fl-chip-logo.fallback { background: #e5e7eb; color: #374151; font-size: 11px; font-weight: 700; }
-.fl-chip-logo-img { width: 40px; height: 28px; object-fit: contain; border-radius: 5px; border: 1px solid var(--fl-border); padding: 2px; background: #fff; }
-.fl-chip-name  { font-size: 10px; color: #374151; font-weight: 500; text-align: center; max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.fl-chip-price { font-size: 11px; font-weight: 700; color: var(--fl-blue); background: #eff6ff; padding: 1px 5px; border-radius: 10px; white-space: nowrap; }
-.fl-chip.active .fl-chip-price { background: var(--fl-blue); color: #fff; }
+
+.fl-chip-logo.all {
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    color: #fff;
+}
+
+.fl-chip-logo.fallback {
+    background: #e5e7eb;
+    color: #374151;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.fl-chip-logo-img {
+    width: 40px;
+    height: 28px;
+    object-fit: contain;
+    border-radius: 5px;
+    border: 1px solid var(--fl-border);
+    padding: 2px;
+    background: #fff;
+}
+
+.fl-chip-name {
+    font-size: 10px;
+    color: #374151;
+    font-weight: 500;
+    text-align: center;
+    max-width: 70px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fl-chip-price {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--fl-blue);
+    background: #eff6ff;
+    padding: 1px 5px;
+    border-radius: 10px;
+    white-space: nowrap;
+}
+
+.fl-chip.active .fl-chip-price {
+    background: var(--fl-blue);
+    color: #fff;
+}
 
 /* List */
-.fl-list { display: flex; flex-direction: column; gap: 10px; }
+.fl-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
 
 /* Empty */
 .fl-empty {
@@ -605,14 +869,118 @@ export default {
     padding: 48px 20px;
     text-align: center;
 }
-.fl-empty-icon { font-size: 48px; color: #d1d5db; margin-bottom: 12px; }
-.fl-empty h3 { font-size: 16px; font-weight: 700; color: #374151; margin: 0 0 6px; }
-.fl-empty p  { font-size: 13px; color: #6b7280; margin: 0; }
+
+.fl-empty-icon {
+    font-size: 48px;
+    color: #d1d5db;
+    margin-bottom: 12px;
+}
+
+.fl-empty h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: #374151;
+    margin: 0 0 6px;
+}
+
+.fl-empty p {
+    font-size: 13px;
+    color: #6b7280;
+    margin: 0;
+}
+
+/* Pagination */
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 24px;
+    padding: 16px 0;
+    background: #fff;
+    border-radius: 10px;
+}
+
+.page-btn {
+    padding: 8px 12px;
+    border: 1px solid var(--fl-border);
+    background: #fff;
+    cursor: pointer;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: all .2s;
+}
+
+.page-btn:hover:not(:disabled) {
+    background: #eff6ff;
+    border-color: var(--fl-blue);
+    color: var(--fl-blue);
+}
+
+.page-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.page-numbers {
+    display: flex;
+    gap: 6px;
+}
+
+.page-number {
+    min-width: 36px;
+    padding: 8px 6px;
+    border: 1px solid var(--fl-border);
+    background: #fff;
+    cursor: pointer;
+    border-radius: 6px;
+    font-size: 14px;
+    text-align: center;
+    transition: all .2s;
+}
+
+.page-number:hover:not(.active) {
+    background: #eff6ff;
+    border-color: var(--fl-blue);
+    color: var(--fl-blue);
+}
+
+.page-number.active {
+    background: var(--fl-blue);
+    border-color: var(--fl-blue);
+    color: #fff;
+    cursor: default;
+}
 
 /* Responsive */
 @media (max-width: 480px) {
-    .fl-chip     { min-width: 60px; padding: 5px 6px; }
-    .fl-chip-logo, .fl-chip-logo-img { width: 34px; height: 24px; }
-    .fl-sort-bar { padding: 8px 12px; }
+    .fl-chip {
+        min-width: 60px;
+        padding: 5px 6px;
+    }
+
+    .fl-chip-logo, .fl-chip-logo-img {
+        width: 34px;
+        height: 24px;
+    }
+
+    .fl-sort-bar {
+        padding: 8px 12px;
+    }
+
+    .pagination {
+        gap: 4px;
+    }
+
+    .page-number {
+        min-width: 32px;
+        padding: 6px 4px;
+        font-size: 12px;
+    }
+
+    .page-btn {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
 }
 </style>

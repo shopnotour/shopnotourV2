@@ -104,21 +104,43 @@
                         <span><i class="fa fa-tag"></i> Segment Disc.<span v-if="flight.charges_details.segment_discount_label" class="fc-pb-pct"> ({{ flight.charges_details.segment_discount_label }})</span></span>
                         <span>-৳{{ formatPrice(segmentDiscount) }}</span>
                     </div>
-                    <div v-if="otherDiscount > 0 && isLoggedIn" class="fc-pb-row fc-pb-disc">
+                    <div
+                        v-if="discountVisible && otherDiscount > 0 && canShowDiscount"
+                        class="fc-pb-row fc-pb-disc"
+                    >
                         <span><i class="fa fa-tag"></i> Discount<span v-if="flight.charges_details.flight_discount_label" class="fc-pb-pct"> ({{ flight.charges_details.flight_discount_label }})</span></span>
                         <span>-৳{{ formatPrice(otherDiscount) }}</span>
                     </div>
                 </div>
                 <div class="fc-total">
-                    <span class="fc-total-label">You Pay</span>
-                    <span class="fc-total-price">৳{{ formatPrice(isLoggedIn ? flight.price.total : subtotalBeforeDiscount) }}</span>
-                    <span class="fc-total-pax">per person</span>
+                    <span class="fc-total-label" style="display: inline-flex; align-items: center; gap: 8px;">
+                        You Pay
+
+                        <span
+                            v-if="canShowDiscount"
+                            @click="discountVisible = !discountVisible"
+                            style="cursor: pointer;"
+                        >
+                            <i :class="discountVisible ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'" style="color:red;"></i>
+                        </span>
+                    </span>
+                    <span class="fc-total-price">
+                        ৳{{
+                            formatPrice(
+                                isLoggedIn
+                                    ? (
+                                        discountVisible
+                                            ? flight.price.total
+                                            : subtotalBeforeDiscount
+                                    )
+                                    : subtotalBeforeDiscount
+                            )
+                        }}
+                    </span>
+                    <!-- <span class="fc-total-pax">per person</span> -->
                 </div>
                 <div class="fc-btns">
-                    <button @click="bookFlight" class="fc-book-btn">
-                        <i :class="flight.is_ndc ? 'fa fa-search-dollar' : 'fa fa-bolt'"></i>
-                        {{ flight.is_ndc ? 'Price Check' : 'Book Now' }}
-                    </button>
+                    <button @click="bookFlight" class="fc-book-btn"><i class="fa fa-bolt"></i> Book Now</button>
                     <div class="fc-actions">
                         <button @click="openModal" class="fc-detail-btn"><i class="fa fa-list"></i> Details</button>
                         <button @click="copyFlightDetails" class="fc-copy-btn" :class="{ copied: isCopied }"><i :class="isCopied ? 'fa fa-check' : 'fa fa-copy'"></i></button>
@@ -139,10 +161,7 @@
             <div class="fc-mp-right">
                 <button @click="openModal" class="fc-mp-detail"><i class="fa fa-list"></i></button>
                 <button @click="copyFlightDetails" class="fc-mp-copy" :class="{ copied: isCopied }"><i :class="isCopied ? 'fa fa-check' : 'fa fa-copy'"></i></button>
-                <button @click="bookFlight" class="fc-mp-book">
-                    {{ flight.is_ndc ? 'Price' : 'Book' }}
-                    <i class="fa fa-arrow-right"></i>
-                </button>
+                <button @click="bookFlight" class="fc-mp-book">Book <i class="fa fa-arrow-right"></i></button>
             </div>
         </div>
 
@@ -159,17 +178,26 @@
                     <div class="fc-ps-row fc-ps-sub"><span>= Subtotal</span><span>৳{{ formatPrice(subtotalBeforeDiscount) }}</span></div>
                 </template>
                 <div v-if="segmentDiscount > 0 && isLoggedIn" class="fc-pb-row fc-pb-disc"><span><i class="fa fa-tag"></i> Segment Discount</span><span>-৳{{ formatPrice(segmentDiscount) }}</span></div>
-                <div v-if="otherDiscount > 0 && isLoggedIn" class="fc-pb-row fc-pb-disc"><span><i class="fa fa-tag"></i> Discount</span><span>-৳{{ formatPrice(otherDiscount) }}</span></div>
-                <div class="fc-ps-total"><span>You Pay</span><span>৳{{ formatPrice(isLoggedIn ? flight.price.total : subtotalBeforeDiscount) }}</span></div>
-                <button @click="bookFlight" class="fc-ps-book">
-                    <i :class="flight.is_ndc ? 'fa fa-search-dollar' : 'fa fa-bolt'"></i>
-                    {{ flight.is_ndc ? 'Price Check' : 'Book Now' }}
-                </button>
+                <div v-if="discountVisible && otherDiscount > 0 && canShowDiscount" class="fc-pb-row fc-pb-disc"><span><i class="fa fa-tag"></i> Discount</span><span>-৳{{ formatPrice(otherDiscount) }}</span></div>
+                <div class="fc-ps-total"><span>You Pay</span><span>৳{{
+                        formatPrice(
+                            isLoggedIn
+                                ? (
+                                    discountVisible
+                                        ? flight.price.total
+                                        : subtotalBeforeDiscount
+                                )
+                                : subtotalBeforeDiscount
+                        )
+                    }}</span>
+                </div>
+                <button @click="bookFlight" class="fc-ps-book"><i class="fa fa-bolt"></i> Book Now</button>
             </div>
         </transition>
 
         <!-- FLIGHT DETAILS MODAL -->
         <transition name="fc-modal-fade">
+
             <div v-if="showModal" class="fc-modal-overlay" @click.self="closeModal">
                 <div class="fc-modal">
                     <div class="fc-mh">
@@ -182,6 +210,10 @@
                                     <span v-if="flight.is_ndc" class="fc-mh-ndc-badge">NDC</span>
                                 </div>
                             </div>
+                        </div>
+                        <div @click="discountVisible = !discountVisible"
+                             style="margin-right: 12px; cursor: pointer;">
+                            <i :class="discountVisible ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'"></i>
                         </div>
                         <button @click="closeModal" class="fc-mh-close"><i class="fa fa-times"></i></button>
                     </div>
@@ -249,7 +281,11 @@
                         </div>
                         <!-- FARE -->
                         <div v-if="activeModalTab === 'fare'">
-                            <div class="fc-mb-heading"><i class="fa fa-users"></i> Fare by Passenger</div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="fc-mb-heading">
+                                    <i class="fa fa-users"></i> Fare by Passenger
+                                </div>
+                            </div>
                             <div class="fc-table-wrap">
                                 <table class="fc-table">
                                     <thead><tr><th>Type</th><th>Qty</th><th>Base</th><th>Tax</th><th>Total</th></tr></thead>
@@ -271,8 +307,11 @@
                                 <template v-if="flight.charges_details && +flight.charges_details.service_charge"><div class="fc-cr fc-cr-add"><span>+ Service Charge</span><span>৳{{ formatPrice(flight.charges_details.service_charge) }}</span></div></template>
                                 <div v-if="hasCharges" class="fc-cr fc-cr-sub"><span>= Subtotal</span><span>৳{{ formatPrice(subtotalBeforeDiscount) }}</span></div>
                                 <div v-if="segmentDiscount > 0 && isLoggedIn" class="fc-pb-row fc-pb-disc"><span><i class="fa fa-tag"></i> Segment Disc.</span><span>-৳{{ formatPrice(segmentDiscount) }}</span></div>
-                                <div v-if="otherDiscount > 0 && isLoggedIn" class="fc-pb-row fc-pb-disc"><span><i class="fa fa-tag"></i> Discount</span><span>-৳{{ formatPrice(otherDiscount) }}</span></div>
-                                <div class="fc-cr fc-cr-total"><span><strong>You Pay</strong></span><span>৳{{ formatPrice(isLoggedIn ? flight.price.total : subtotalBeforeDiscount) }}</span></div>
+                                <div v-if="discountVisible && otherDiscount > 0 && canShowDiscount" class="fc-pb-row fc-pb-disc"><span><i class="fa fa-tag"></i> Discount</span><span>-৳{{ formatPrice(otherDiscount) }}</span></div>
+                                <div class="fc-cr fc-cr-total">
+                                    <span><strong>You Pay</strong></span>
+                                    <span>৳{{ formatPrice(finalPrice) }}</span>
+                                </div>
                             </div>
                         </div>
                         <!-- BAGGAGE -->
@@ -334,11 +373,11 @@
                         </div>
                     </div>
                     <div class="fc-mf">
-                        <div class="fc-mf-price"><span>Total</span><strong>৳{{ formatPrice(isLoggedIn ? flight.price.total : subtotalBeforeDiscount) }}</strong></div>
-                        <div class="fc-mf-btns"><button @click="bookFlight" class="fc-mf-pri">
-                            <i :class="flight.is_ndc ? 'fa fa-search-dollar' : 'fa fa-bolt'"></i>
-                            {{ flight.is_ndc ? 'Price Check' : 'Book Now' }}
-                        </button></div>
+                        <div class="fc-mf-price">
+                            <span>Total</span>
+                            <strong>৳{{ formatPrice(finalPrice) }}</strong>
+                        </div>
+                        <div class="fc-mf-btns"><button @click="closeModal" class="fc-mf-sec">Close</button><button @click="bookFlight" class="fc-mf-pri"><i class="fa fa-bolt"></i> Book Now</button></div>
                     </div>
                 </div>
             </div>
@@ -548,10 +587,15 @@
 <script>
 export default {
     name: 'FlightCard',
-    props: { flight: { type: Object, required: true } },
+    props: {
+        flight: { type: Object, required: true },
+        showDiscount: { type: Boolean, default: false }
+    },
     data() {
         return {
             isLoggedIn: window.isLoggedIn === true,
+            roleId: window.userRoleId,
+            discountVisible: this.showDiscount,
             showModal: false,
             showError: false,
             errorMessage: '',
@@ -579,6 +623,26 @@ export default {
         subtotalBeforeDiscount() { return this.grossFare + (Number(this.flight.charges_details?.ait_amount) || 0) + (Number(this.flight.charges_details?.service_charge) || 0); },
         segmentDiscount() { return Number(this.flight.charges_details?.segment_discount_total) || 0; },
         otherDiscount()   { return Number(this.flight.flight_discount_details?.flight_discount_amount) || 0; },
+        canShowDiscount() {
+            return this.isLoggedIn && [1, 2].includes(Number(this.roleId));
+        },
+        finalPrice() {
+            if (!this.isLoggedIn) {
+                return Number(this.subtotalBeforeDiscount) || 0;
+            }
+
+            // Hide discount
+            if (!this.discountVisible) {
+                return Number(this.subtotalBeforeDiscount) || 0;
+            }
+
+            // Show discount
+            return (
+                (Number(this.subtotalBeforeDiscount) || 0)
+                - (Number(this.segmentDiscount) || 0)
+                - (Number(this.otherDiscount) || 0)
+            );
+        },
     },
     methods: {
         getLegLabel(i) {
@@ -685,34 +749,27 @@ export default {
                             : (data.data?.is_ndc ? 'NDC' : 'Sabre');
                         this.airArabiaModalTab = 'price';
                         this.showAirArabiaModal = true;
-                        if (btn) { btn.disabled = false; btn.innerHTML = this.flight.is_ndc
-                            ? '<i class="fa fa-search-dollar"></i> Price Check'
-                            : '<i class="fa fa-bolt"></i> Book Now'; }
+                        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa fa-bolt"></i> Book Now'; }
                         return;
                     }
 
                     if (data.price_changed) {
                         this.showError = true;
                         this.errorMessage = 'মূল্য পরিবর্তন হয়েছে। পুরনো মূল্য: ৳' + data.old_price + ' → নতুন মূল্য: ৳' + data.new_api_price + '। অনুগ্রহ করে নতুন করে সার্চ করুন।';
-                        if (btn) { btn.disabled = false; btn.innerHTML = this.flight.is_ndc
-                            ? '<i class="fa fa-search-dollar"></i> Price Check'
-                            : '<i class="fa fa-bolt"></i> Book Now'; }
+                        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa fa-bolt"></i> Book Now'; }
                         return;
                     }
 
                     this.showError = true;
                     this.errorMessage = data.message || 'এই ফ্লাইটটি এই মুহূর্তে বুক করা সম্ভব হচ্ছে না। আবার চেষ্টা করুন।';
-                    if (btn) { btn.disabled = false; btn.innerHTML = this.flight.is_ndc
-                        ? '<i class="fa fa-search-dollar"></i> Price Check'
-                        : '<i class="fa fa-bolt"></i> Book Now'; }
+                    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa fa-bolt"></i> Book Now'; }
                 })
                 .catch(() => {
                     alert('Something went wrong!');
-                    if (btn) { btn.disabled = false; btn.innerHTML = this.flight.is_ndc
-                        ? '<i class="fa fa-search-dollar"></i> Price Check'
-                        : '<i class="fa fa-bolt"></i> Book Now'; }
+                    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa fa-bolt"></i> Book Now'; }
                 });
         }
+
     }
 };
 </script>

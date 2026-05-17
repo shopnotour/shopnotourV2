@@ -501,6 +501,7 @@
         .b-warning   { background:#fef3c7; color:#92400e; }
         .b-danger    { background:#fee2e2; color:#991b1b; }
         .b-secondary { background:#f3f4f6; color:#374151; }
+        .b-youtube   { background:#fee2e2; color:#dc2626; }
 
         /* Status toggle */
         .toggle-status-btn { border:none; cursor:pointer; transition: opacity .15s, transform .1s; }
@@ -543,6 +544,55 @@
         #toast.t-success { background: #059669; }
         #toast.t-error   { background: #dc2626; }
 
+        /* Media preview */
+        .media-preview {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f9fafb;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .media-preview img {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 6px;
+        }
+        .media-preview video {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 6px;
+        }
+        .remove-media-btn {
+            margin-top: 8px;
+            padding: 4px 12px;
+            background: #dc2626;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+        .remove-media-btn:hover {
+            background: #b91c1c;
+        }
+
+        /* YouTube embed */
+        .youtube-embed {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            overflow: hidden;
+            max-width: 100%;
+            border-radius: 6px;
+        }
+        .youtube-embed iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
         @media (max-width: 600px) {
             #popupTable_wrapper > div { display: flex; flex-direction: column; gap: 8px; }
             #popupTable_filter, #popupTable_length, #popupTable_info, #popupTable_paginate {
@@ -583,43 +633,69 @@
             <div class="p-4 sm:p-5 w-full min-w-0">
                 <table id="popupTable" style="width:100%">
                     <thead>
-                    <tr>
-                        <th>{{ __('Page') }}</th>
-                        <th>{{ __('Title') }}</th>
-                        <th>{{ __('Type') }}</th>
-                        <th>{{ __('Show Once') }}</th>
-                        <th>{{ __('Status') }}</th>
-                        <th>{{ __('Created By') }}</th>
-                        <th>{{ __('Updated By') }}</th>
-                        <th>{{ __('Updated At') }}</th>
-                        <th>{{ __('Action') }}</th>
-                    </tr>
+                        <tr>
+                            <th>{{ __('Page') }}</th>
+                            <th>{{ __('Title') }}</th>
+                            <th>{{ __('Type') }}</th>
+                            <th>{{ __('Media') }}</th>
+                            <th>{{ __('Media Type') }}</th>
+                            <th>{{ __('Show Once') }}</th>
+                            <th>{{ __('Status') }}</th>
+                            <th>{{ __('Created By') }}</th>
+                            <th>{{ __('Updated By') }}</th>
+                            <th>{{ __('Updated At') }}</th>
+                            <th>{{ __('Action') }}</th>
+                        </tr>
                     </thead>
                     <tbody>
                     @forelse($popups as $popup)
                         <tr id="row-{{ $popup->id }}">
-
                             <td class="font-semibold">{{ $pageKeys[$popup->page_key] ?? $popup->page_key }}</td>
-
                             <td>{{ $popup->title ?? '—' }}</td>
-
                             <td>
                                 @php
                                     $typeCls = ['info'=>'b-info','success'=>'b-success','warning'=>'b-warning','danger'=>'b-danger'][$popup->type] ?? 'b-secondary';
                                 @endphp
                                 <span class="r-badge {{ $typeCls }}">{{ ucfirst($popup->type) }}</span>
                             </td>
-
+                            <td>
+                                @if($popup->hasMedia())
+                                    @if($popup->media === 'youtube_link')
+                                        <div style="width:60px;height:40px;background:#fee2e2;border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="viewYouTube('{{ $popup->youtube_embed_url }}')">
+                                            <i class="fa fa-youtube-play" style="color:#dc2626;font-size:24px"></i>
+                                        </div>
+                                    @elseif(in_array($popup->media, ['image', 'video']) && $popup->media_url)
+                                        @if($popup->media === 'image')
+                                            <img src="{{ $popup->media_url }}" 
+                                                style="width:40px;height:40px;object-fit:cover;border-radius:4px;cursor:pointer"
+                                                onclick="viewMedia('{{ $popup->media_url }}','image')">
+                                        @else
+                                            <video width="60" height="40" style="border-radius:4px;cursor:pointer"
+                                                onclick="viewMedia('{{ $popup->media_url }}','video')">
+                                                <source src="{{ $popup->media_url }}">
+                                            </video>
+                                        @endif
+                                    @endif
+                                @else
+                                    <span style="color:#9ca3af;">—</span>
+                                @endif
+                            </td>
+                            <td>
+                                @if($popup->media)
+                                    <span class="r-badge {{ $popup->media === 'youtube_link' ? 'b-youtube' : 'b-secondary' }}">
+                                        {{ ucfirst(str_replace('_', ' ', $popup->media)) }}
+                                    </span>
+                                @else
+                                    <span style="color:#9ca3af;">—</span>
+                                @endif
+                            </td>
                             <td>
                                 <span class="r-badge {{ $popup->show_once ? 'b-warning' : 'b-secondary' }}">
                                     {{ $popup->show_once ? __('Once') : __('Always') }}
                                 </span>
                             </td>
-
-                            {{-- ✅ Status — AJAX toggle --}}
                             <td>
-                                <button
-                                    class="r-badge toggle-status-btn {{ $popup->is_active ? 'b-success' : 'b-secondary' }}"
+                                <button class="r-badge toggle-status-btn {{ $popup->is_active ? 'b-success' : 'b-secondary' }}"
                                     data-id="{{ $popup->id }}"
                                     data-url="{{ route('popup.toggle', $popup->id) }}"
                                     title="{{ $popup->is_active ? __('Click to deactivate') : __('Click to activate') }}"
@@ -627,14 +703,11 @@
                                     {{ $popup->is_active ? __('Active') : __('Inactive') }}
                                 </button>
                             </td>
-
                             <td>{{ $popup->creator->name ?? '—' }}</td>
                             <td>{{ $popup->updater->name ?? '—' }}</td>
-
                             <td data-order="{{ $popup->updated_at->timestamp }}" style="white-space:nowrap">
                                 {{ $popup->updated_at->format('d M Y, h:i A') }}
                             </td>
-
                             <td>
                                 <div style="display:flex;gap:4px">
                                     <button onclick='openEditModal(@json($popup))'
@@ -650,7 +723,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" style="text-align:center;padding:40px;color:#9ca3af">
+                            <td colspan="11" style="text-align:center;padding:40px;color:#9ca3af">
                                 <i class="fa fa-inbox" style="font-size:2rem;display:block;margin-bottom:8px"></i>
                                 {{ __('No popup messages found.') }}
                             </td>
@@ -664,7 +737,7 @@
 
     <div id="toast"></div>
 
-    {{-- ═══════════════════ MODAL ═══════════════════ --}}
+    {{-- Modal --}}
     <div id="popupModal">
         <div class="modal-box">
             <div class="flex items-center justify-between mb-5">
@@ -672,7 +745,7 @@
                 <button onclick="closeModal()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#9ca3af">&times;</button>
             </div>
 
-            <form id="popupForm">
+            <form id="popupForm" enctype="multipart/form-data">
                 <div style="display:flex;flex-direction:column;gap:14px">
 
                     <div>
@@ -700,6 +773,37 @@
                     </div>
 
                     <div>
+                        <label class="form-label">{{ __('Media Type') }}</label>
+                        <select name="media_type" id="f_media_type" class="form-input">
+                            <option value="">— No media —</option>
+                            <option value="image">📷 Image</option>
+                            <option value="video">🎬 Video</option>
+                            <option value="youtube_link">▶️ YouTube Link</option>
+                        </select>
+                        <div class="invalid-feedback" id="err_media_type"></div>
+                    </div>
+
+                    <div id="media_file_container" style="display:none">
+                        <label class="form-label">{{ __('Media File') }}</label>
+                        <input type="file" name="media_file" id="f_media_file" class="form-input" accept="image/*,video/*">
+                        <small style="font-size:0.7rem;color:#6b7280">Supported: JPG, PNG, GIF, WebP, MP4, WebM, OGG, MOV (Max 20MB)</small>
+                        <div class="invalid-feedback" id="err_media_file"></div>
+                        
+                        <!-- Preview area -->
+                        <div id="mediaPreview" class="media-preview" style="display:none"></div>
+                    </div>
+
+                    <div id="youtube_link_container" style="display:none">
+                        <label class="form-label">{{ __('YouTube URL') }}</label>
+                        <input type="text" name="media_link" id="f_media_link" class="form-input" placeholder="https://www.youtube.com/watch?v=...">
+                        <small style="font-size:0.7rem;color:#6b7280">Enter any YouTube video URL</small>
+                        <div class="invalid-feedback" id="err_media_link"></div>
+                    </div>
+
+                    <div id="existingMediaContainer"></div>
+                    <input type="hidden" name="remove_media" id="remove_media" value="0">
+
+                    <div>
                         <label class="form-label">{{ __('Type') }} <span style="color:red">*</span></label>
                         <select name="type" id="f_type" class="form-input">
                             <option value="info">ℹ️ Info</option>
@@ -712,7 +816,7 @@
 
                     <div style="display:flex;gap:24px;flex-wrap:wrap">
                         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.85rem;font-weight:600;color:#374151">
-                            <input type="checkbox" id="f_is_active" style="width:16px;height:16px;cursor:pointer">
+                            <input type="checkbox" id="f_is_active" style="width:16px;height:16px;cursor:pointer" checked>
                             {{ __('Active') }}
                         </label>
                         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.85rem;font-weight:600;color:#374151">
@@ -736,6 +840,14 @@
             </form>
         </div>
     </div>
+
+    <!-- Media Viewer Modal -->
+    <div id="mediaViewerModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 10000; align-items: center; justify-content: center;">
+        <div style="position: relative; max-width: 90%; max-height: 90%;">
+            <button onclick="closeMediaViewer()" style="position: absolute; top: -40px; right: 0; background: none; border: none; color: white; font-size: 30px; cursor: pointer;">&times;</button>
+            <div id="mediaViewerContent"></div>
+        </div>
+    </div>
 @endsection
 
 @push('js')
@@ -752,7 +864,6 @@
         const CSRF  = "{{ csrf_token() }}";
         const STORE = "{{ route('popup.store') }}";
 
-        // ── DataTable ─────────────────────────────────────────────
         let dt;
         $(document).ready(function () {
             dt = $('#popupTable').DataTable({
@@ -762,18 +873,18 @@
                     "<'flex flex-wrap items-center justify-between gap-y-2 mt-3'i<'ml-auto'p>>",
                 pageLength: 15,
                 lengthMenu: [[15, 25, 50, -1], [15, 25, 50, 'All']],
-                order: [[7, 'desc']],
+                order: [[9, 'desc']],
                 responsive: {
                     details: { type: 'inline', renderer: $.fn.dataTable.Responsive.renderer.listHiddenNodes() }
                 },
                 columnDefs: [
                     { responsivePriority: 1, targets: 0 },
-                    { responsivePriority: 2, targets: 4 },
+                    { responsivePriority: 2, targets: 3 },
                     { responsivePriority: 3, targets: 2 },
-                    { responsivePriority: 4, targets: 8, orderable: false },
-                    { responsivePriority: 5, targets: 7 },
+                    { responsivePriority: 4, targets: 10, orderable: false },
+                    { responsivePriority: 5, targets: 9 },
                     { responsivePriority: 6, targets: 1 },
-                    { responsivePriority: 7, targets: 3 },
+                    { responsivePriority: 7, targets: 4 },
                     { responsivePriority: 8, targets: 5 },
                     { responsivePriority: 9, targets: 6 },
                 ],
@@ -795,7 +906,6 @@
             });
         });
 
-        // ── Toast ─────────────────────────────────────────────────
         let toastTimer;
         function showToast(msg, type = 'success') {
             const t = document.getElementById('toast');
@@ -805,7 +915,6 @@
             toastTimer = setTimeout(() => { t.className = ''; }, 3000);
         }
 
-        // ── AJAX helper ───────────────────────────────────────────
         function ajaxPost(url, body) {
             return fetch(url, {
                 method: 'POST',
@@ -818,7 +927,6 @@
             }).then(r => r.json());
         }
 
-        // ── Status Toggle ─────────────────────────────────────────
         function toggleStatus(btn) {
             btn.classList.add('loading');
             ajaxPost(btn.dataset.url, {})
@@ -837,7 +945,6 @@
                 .finally(() => btn.classList.remove('loading'));
         }
 
-        // ── Delete ────────────────────────────────────────────────
         function deletePopup(id, url) {
             if (!confirm('Delete this popup?')) return;
             ajaxPost(url, {})
@@ -853,7 +960,6 @@
                 .catch(() => showToast('Request failed.', 'error'));
         }
 
-        // ── Modal ─────────────────────────────────────────────────
         let editingId = null;
 
         function clearErrors() {
@@ -873,31 +979,94 @@
             });
         }
 
+        // Handle media type change
+        document.getElementById('f_media_type').addEventListener('change', function() {
+            const mediaType = this.value;
+            const fileContainer = document.getElementById('media_file_container');
+            const youtubeContainer = document.getElementById('youtube_link_container');
+            const mediaPreview = document.getElementById('mediaPreview');
+            
+            fileContainer.style.display = 'none';
+            youtubeContainer.style.display = 'none';
+            mediaPreview.style.display = 'none';
+            
+            if (mediaType === 'image' || mediaType === 'video') {
+                fileContainer.style.display = 'block';
+            } else if (mediaType === 'youtube_link') {
+                youtubeContainer.style.display = 'block';
+            }
+        });
+
+        // Preview media file
+        document.getElementById('f_media_file').addEventListener('change', function(e) {
+            const preview = document.getElementById('mediaPreview');
+            const file = e.target.files[0];
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.style.display = 'block';
+                    const fileType = file.type;
+                    
+                    if (fileType.startsWith('image/')) {
+                        preview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+                    } else if (fileType.startsWith('video/')) {
+                        preview.innerHTML = `<video controls><source src="${e.target.result}" type="${fileType}"></video>`;
+                    }
+                };
+                reader.readAsDataURL(file);
+            } else {
+                preview.style.display = 'none';
+                preview.innerHTML = '';
+            }
+        });
+
         function openModal() {
             editingId = null;
             clearErrors();
-            document.getElementById('modalTitle').textContent  = 'Add Popup Message';
+            document.getElementById('modalTitle').textContent = 'Add Popup Message';
             document.getElementById('saveBtnText').textContent = 'Save';
-            document.getElementById('f_page_key').value        = '';
-            document.getElementById('f_title').value           = '';
-            document.getElementById('f_message').value         = '';
-            document.getElementById('f_type').value            = 'info';
-            document.getElementById('f_is_active').checked     = true;
-            document.getElementById('f_show_once').checked     = false;
+            document.getElementById('f_page_key').value = '';
+            document.getElementById('f_title').value = '';
+            document.getElementById('f_message').value = '';
+            document.getElementById('f_type').value = 'info';
+            document.getElementById('f_is_active').checked = true;
+            document.getElementById('f_show_once').checked = false;
+            document.getElementById('f_media_type').value = '';
+            document.getElementById('f_media_file').value = '';
+            document.getElementById('f_media_link').value = '';
+            document.getElementById('remove_media').value = '0';
+            document.getElementById('existingMediaContainer').innerHTML = '';
+            document.getElementById('mediaPreview').style.display = 'none';
+            document.getElementById('media_file_container').style.display = 'none';
+            document.getElementById('youtube_link_container').style.display = 'none';
             document.getElementById('popupModal').classList.add('open');
         }
 
         function openEditModal(popup) {
             editingId = popup.id;
             clearErrors();
-            document.getElementById('modalTitle').textContent  = 'Edit Popup Message';
+            document.getElementById('modalTitle').textContent = 'Edit Popup Message';
             document.getElementById('saveBtnText').textContent = 'Update';
-            document.getElementById('f_page_key').value        = popup.page_key;
-            document.getElementById('f_title').value           = popup.title ?? '';
-            document.getElementById('f_message').value         = popup.message;
-            document.getElementById('f_type').value            = popup.type;
-            document.getElementById('f_is_active').checked     = popup.is_active == 1;
-            document.getElementById('f_show_once').checked     = popup.show_once == 1;
+            document.getElementById('f_page_key').value = popup.page_key;
+            document.getElementById('f_title').value = popup.title ?? '';
+            document.getElementById('f_message').value = popup.message;
+            document.getElementById('f_type').value = popup.type;
+            document.getElementById('f_is_active').checked = popup.is_active == 1;
+            document.getElementById('f_show_once').checked = popup.show_once == 1;
+            document.getElementById('f_media_type').value = popup.media ?? '';
+            document.getElementById('remove_media').value = '0';
+            
+            // Trigger change event to show appropriate container
+            const event = new Event('change');
+            document.getElementById('f_media_type').dispatchEvent(event);
+            
+            if (popup.media === 'youtube_link' && popup.media_links) {
+                document.getElementById('f_media_link').value = popup.media_links;
+            } else if (popup.media_links && popup.media_url) {
+                showExistingMedia(popup.media_url, popup.is_image_file, popup.is_video_file);
+            }
+            
             document.getElementById('popupModal').classList.add('open');
         }
 
@@ -905,14 +1074,41 @@
             document.getElementById('popupModal').classList.remove('open');
         }
 
-        // ── Form Submit ───────────────────────────────────────────
-        document.getElementById('popupForm').addEventListener('submit', function (e) {
+        function showExistingMedia(mediaPath, isImage, isVideo) {
+            const container = document.getElementById('existingMediaContainer');
+            if (mediaPath) {
+                let mediaHtml = '';
+                if (isImage) {
+                    mediaHtml = `<div class="media-preview">
+                                    <img src="${mediaPath}" alt="Current media">
+                                    <button type="button" class="remove-media-btn" onclick="removeExistingMedia()">Remove Media</button>
+                                </div>`;
+                } else if (isVideo) {
+                    mediaHtml = `<div class="media-preview">
+                                    <video controls><source src="${mediaPath}" type="video/mp4"></video>
+                                    <button type="button" class="remove-media-btn" onclick="removeExistingMedia()">Remove Media</button>
+                                </div>`;
+                }
+                container.innerHTML = mediaHtml;
+            } else {
+                container.innerHTML = '';
+            }
+        }
+
+        function removeExistingMedia() {
+            if (confirm('Remove this media?')) {
+                document.getElementById('remove_media').value = '1';
+                document.getElementById('existingMediaContainer').innerHTML = '<div class="media-preview" style="background:#fee2e2;color:#991b1b">Media will be removed upon saving</div>';
+                document.getElementById('f_media_type').value = '';
+                document.getElementById('f_media_type').dispatchEvent(new Event('change'));
+            }
+        }
+
+        document.getElementById('popupForm').addEventListener('submit', function(e) {
             e.preventDefault();
             clearErrors();
 
             const isEdit = editingId !== null;
-            // ✅ store = POST /popup-messages
-            // ✅ update = POST /popup-messages/{id}/update
             const url = isEdit
                 ? "{{ route('popup.update', ['popupMessage' => '__ID__']) }}".replace('__ID__', editingId)
                 : STORE;
@@ -921,37 +1117,96 @@
             saveBtn.disabled = true;
             document.getElementById('saveBtnText').textContent = 'Saving...';
 
-            ajaxPost(url, {
-                page_key:  document.getElementById('f_page_key').value,
-                title:     document.getElementById('f_title').value,
-                message:   document.getElementById('f_message').value,
-                type:      document.getElementById('f_type').value,
-                is_active: document.getElementById('f_is_active').checked ? 1 : 0,
-                show_once: document.getElementById('f_show_once').checked  ? 1 : 0,
+            const formData = new FormData();
+            formData.append('page_key', document.getElementById('f_page_key').value);
+            formData.append('title', document.getElementById('f_title').value);
+            formData.append('message', document.getElementById('f_message').value);
+            formData.append('type', document.getElementById('f_type').value);
+            formData.append('is_active', document.getElementById('f_is_active').checked ? '1' : '0');
+            formData.append('show_once', document.getElementById('f_show_once').checked ? '1' : '0');
+            
+            const mediaType = document.getElementById('f_media_type').value;
+            if (mediaType) {
+                formData.append('media_type', mediaType);
+                
+                if (mediaType === 'youtube_link') {
+                    formData.append('media_link', document.getElementById('f_media_link').value);
+                } else if (document.getElementById('f_media_file').files[0]) {
+                    formData.append('media_file', document.getElementById('f_media_file').files[0]);
+                }
+            }
+            
+            if (document.getElementById('remove_media').value === '1') {
+                formData.append('remove_media', '1');
+            }
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': CSRF,
+                    'Accept': 'application/json',
+                },
+                body: formData
             })
-                .then(data => {
-                    if (data.errors) { showErrors(data.errors); return; }
-                    if (data.success) {
-                        closeModal();
-                        showToast(data.message ?? (isEdit ? 'Updated.' : 'Created.'));
-                        setTimeout(() => location.reload(), 900);
-                    } else {
-                        showToast(data.message ?? 'Something went wrong.', 'error');
-                    }
-                })
-                .catch(() => showToast('Request failed.', 'error'))
-                .finally(() => {
-                    saveBtn.disabled = false;
-                    document.getElementById('saveBtnText').textContent = isEdit ? 'Update' : 'Save';
-                });
+            .then(response => response.json())
+            .then(data => {
+                if (data.errors) { 
+                    showErrors(data.errors); 
+                } else if (data.success) {
+                    closeModal();
+                    showToast(data.message ?? (isEdit ? 'Updated.' : 'Created.'));
+                    setTimeout(() => location.reload(), 900);
+                } else {
+                    showToast(data.message ?? 'Something went wrong.', 'error');
+                }
+            })
+            .catch(() => showToast('Request failed.', 'error'))
+            .finally(() => {
+                saveBtn.disabled = false;
+                document.getElementById('saveBtnText').textContent = isEdit ? 'Update' : 'Save';
+            });
         });
 
-        // ── Backdrop / ESC ────────────────────────────────────────
         document.getElementById('popupModal').addEventListener('click', function (e) {
             if (e.target === this) closeModal();
         });
+        
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') closeModal();
+        });
+
+        function viewMedia(url, type) {
+            const viewer = document.getElementById('mediaViewerModal');
+            const content = document.getElementById('mediaViewerContent');
+            
+            if (type === 'image') {
+                content.innerHTML = `<img src="${url}" style="max-width: 90vw; max-height: 90vh; object-fit: contain;">`;
+            } else if (type === 'video') {
+                content.innerHTML = `<video controls style="max-width: 90vw; max-height: 90vh;">
+                                        <source src="${url}">
+                                        Your browser does not support the video tag.
+                                    </video>`;
+            }
+            
+            viewer.style.display = 'flex';
+        }
+
+        function viewYouTube(embedUrl) {
+            const viewer = document.getElementById('mediaViewerModal');
+            const content = document.getElementById('mediaViewerContent');
+            content.innerHTML = `<div class="youtube-embed"><iframe src="${embedUrl}" frameborder="0" allowfullscreen></iframe></div>`;
+            viewer.style.display = 'flex';
+        }
+
+        function closeMediaViewer() {
+            document.getElementById('mediaViewerModal').style.display = 'none';
+            document.getElementById('mediaViewerContent').innerHTML = '';
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeMediaViewer();
+            }
         });
     </script>
 @endpush

@@ -29,7 +29,7 @@ class ModuleProvider extends ModuleServiceProvider
         PermissionHelper::add([
             'booking_manage',
             'booking_user_list_view',
-            'booking_view',
+            'booking_view',         
 //            'booking_requests',
             'booking_users_requests',
             'booking_void',
@@ -81,6 +81,16 @@ class ModuleProvider extends ModuleServiceProvider
             'user_transactions_view',
             'user_tickets_view',
             'user_password_change',
+            'all_booking',
+            'issue_request',
+            'booked',
+            'cancelled',
+            'issued',
+            'pending',
+            'paid',
+            'ticketed',
+            'refunded',
+            'failed',
 
         ]);
     }
@@ -154,7 +164,7 @@ class ModuleProvider extends ModuleServiceProvider
                 "position"=>42,
                 'url'        => '#',
                 'title'      => __('Booking'),
-                'icon'       => 'ion ion-md-airplane',
+                'icon'       => 'ion ion-ios-airplane',
                 'permission' => 'booking_view',
                 'children'   => [
                     'booking'=>[
@@ -193,7 +203,61 @@ class ModuleProvider extends ModuleServiceProvider
                         'permission' => 'booking_ssr',
                     ],
                 ]
-            ]
+            ],
+            'allBooking'=>[
+                "position"=>42,
+                'url'        => '#',
+                'title'      => __('All Booking'),
+                'icon'       => 'ion ion-md-paper-plane',
+                'permission' => 'all_booking',
+                'children'   => [
+                    'issue_request'=>[
+                        'url'        => route('all-booking.issue-request'),
+                        'title'      => __('Issue Request'),
+                        'permission' => 'issue_request',
+                    ],
+                    'booked'=>[
+                        'url'        => route('all-booking.booked'),
+                        'title'      => __('Booked'),
+                        'permission' => 'booked',
+                    ],
+                    'cancelled'=>[
+                        'url'        => route('all-booking.cancelled'),
+                        'title'      => __('Cancelled'),
+                        'permission' => 'cancelled',
+                    ],
+                    'issued'=>[
+                        'url'        => route('all-booking.issued'),
+                        'title'      => __('Issued'),
+                        'permission' => 'issued',
+                    ],
+                    'pending'=>[
+                        'url'        => route('all-booking.pending'),
+                        'title'      => __('Pending'),
+                        'permission' => 'pending',
+                    ],
+                    'paid'=>[
+                        'url'        => route('all-booking.paid'),
+                        'title'      => __('Paid'),
+                        'permission' => 'paid',
+                    ],
+                    'ticketed'=>[
+                        'url'        => route('all-booking.ticketed'),
+                        'title'      => __('Ticketed'),
+                        'permission' => 'ticketed',
+                    ],
+                    'failed'=>[
+                        'url'        => route('all-booking.failed'),
+                        'title'      => __('Failed'),
+                        'permission' => 'failed',
+                    ],
+                    'refunded'=>[
+                        'url'        => route('all-booking.refunded'),
+                        'title'      => __('Refunded'),
+                        'permission' => 'refunded',
+                    ],
+                ]
+            ],
         ];
     }
 

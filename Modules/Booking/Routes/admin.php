@@ -2,6 +2,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Booking\Admin\BookingManagementController;
 use Modules\Booking\Admin\TransactionController;
+use Modules\Booking\Admin\AllBookingController;
 
 //Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function () {
 
@@ -50,6 +51,31 @@ Route::put('/bookings/{id}',             [\Modules\Booking\Admin\BookingManageme
 Route::post('/bookings/{id}/duplicate',  [\Modules\Booking\Admin\BookingManagementController::class, 'duplicate'])
     ->name('admin.bookings.duplicate');
 
+
+Route::group(['prefix' => 'all-booking',], function () {
+
+    // All bookings
+    Route::get('/', [AllBookingController::class, 'index'])->name('all-booking.index');
+
+    // Issue Request
+    Route::get('/issue-request', [AllBookingController::class, 'issueRequest'])->name('all-booking.issue-request');
+    Route::get('/booked', [AllBookingController::class, 'booked'])->name('all-booking.booked');
+    Route::get('/cancelled', [AllBookingController::class, 'cancelled'])->name('all-booking.cancelled');
+    Route::get('/issued', [AllBookingController::class, 'issued'])->name('all-booking.issued');
+    Route::get('/pending', [AllBookingController::class, 'pending'])->name('all-booking.pending');
+    Route::get('/paid', [AllBookingController::class, 'paid'])->name('all-booking.paid');
+    Route::get('/ticketed', [AllBookingController::class, 'ticketed'])->name('all-booking.ticketed');
+    Route::get('/failed', [AllBookingController::class, 'failed'])->name('all-booking.failed');
+    Route::get('/refunded', [AllBookingController::class, 'refunded'])->name('all-booking.refunded');
+    Route::get('/{id}', [AllBookingController::class, 'show'])->name('all-booking.show');
+    Route::get('/{id}/modal', [AllBookingController::class, 'modal'])->name('all-booking.modal');
+    Route::post('/{id}/set-paid', [AllBookingController::class, 'setPaid'])->name('all-booking.setPaid');
+    Route::post('/bulk-action', [AllBookingController::class, 'bulkAction'])->name('all-booking.bulkAction');
+
+    // Update PNR
+    Route::post('/{id}/update-pnr', [AllBookingController::class, 'updatePnr'])->name('all-booking.updatePnr');
+    Route::post('/{id}/duplicate', [AllBookingController::class, 'duplicate'])->name('all-booking.duplicate');
+});
 
 Route::prefix('transactions')->group(function () {
 

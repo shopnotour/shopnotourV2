@@ -17,10 +17,20 @@
         .bravo_form_search .traveler-dropdown,
         .bravo_form_search .passengers-dropdown,
         .bravo_form_search [class*="dropdown"] { z-index: 999 !important; }
+        
+        /* Ensure popup is above Vue components */
+        #userPopupOverlay {
+            z-index: 99999 !important;
+        }
     </style>
 @endpush
 
 @section('content')
+    {{-- Move popup outside Vue's mount point --}}
+    <div id="popup-container">
+        @include('Popup::frontend.partials.popup', ['pageKey' => 'dashboard'])
+    </div>
+    
     <div class="bravo_search_flight">
 
         {{-- ── Search Section ── --}}
@@ -113,6 +123,9 @@
             destinations: @json($destinations ?? []),
             testimonials: @json($testimonials ?? [])
         };
+        
+        // Add a flag to prevent popup from showing multiple times
+        window.popupShown = false;
     </script>
 
     <script>
@@ -177,11 +190,9 @@
     @if(app()->environment('local'))
         @vite(['resources/js/flight-search-app.js'])
     @else
-        <script type="module" src="{{ asset('build/assets/flight-search-app-DNXWwMR6.js') }}"></script>
+        <script type="module" src="{{ asset('build/assets/flight-search-app-CZkkz6Ln.js ') }}"></script>
         <link rel="stylesheet" href="{{ asset('build/assets/flight-search-app-Dhd6jE9w.css') }}">
     @endif
-
-
 
     <script src="{{ asset('themes/gotrip/module/flight/js/flight.js') }}" defer></script>
 @endpush

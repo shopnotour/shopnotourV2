@@ -33,3 +33,5 @@ storage/bc.php
 storage/pro.php
 storage/installed
 public/themes/*/dist
+
+storage/debugbar/

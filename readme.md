@@ -1,31 +1,99 @@
-## About shopno Tour 1.0
-Shopno Tour is a Booking System based on Laravel, designed for a travel website, Marketplace, Travel Agency, Tour Operator, Room Bnb, Villa Rental, Resort Rental, Make Travel website. 
+# Shopno Tour V2 — Local Setup Guide
 
-## Main Features:
+## Requirements
+- PHP 8.1+
+- Composer
+- MySQL
+- Node.js & NPM
 
-1. Laravel 9
-2. Cloud Storage: S3, Google Cloud Storage
-3. Multi Store Marketplace
-4. Coupon Modules
-5. I18n and l10n tool ready
-6. Various Payment Methods
-7. Multi currency
-8. Mobile App
+---
 
-## Payment Gateways:
+## Quick Setup (Windows)
 
-1. Paypal Express
+Clone করার পর PowerShell এ run করুন:
 
-2. Stripe Checkout
+```powershell
+.\setup.ps1
+```
 
-3. Two Checkout
+তারপর:
+1. `.env` file এ database credentials দিন
+2. Database import করুন
+3. `php artisan serve` চালান
 
-4. Paypal Pro
+---
 
-5. Flutterwave Payment
+## Manual Setup (Step by Step)
 
-6. Razorpay
+**1. Clone the repository**
+```bash
+git clone <repository-url>
+cd shopnotourV2
+```
 
-### Get Support: [Click here](https://shopnosoftware.com)
+**2. Install PHP dependencies**
+```bash
+composer install
+```
 
-### Author: [Alimul Razi|01928973565|alimuls@gmail.com]
+**3. Environment setup**
+```bash
+cp .env.example .env
+php artisan key:generate
+```
+
+**4. Configure `.env` file**
+
+`.env` file খুলুন এবং database credentials দিন:
+```
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=your_database_name
+DB_USERNAME=your_db_username
+DB_PASSWORD=your_db_password
+```
+
+**5. Import the database**
+
+phpMyAdmin দিয়ে অথবা terminal এ:
+```bash
+mysql -u root -p your_database_name < database.sql
+```
+
+**6. Storage permission & link**
+
+PowerShell এ run করুন:
+```powershell
+$folders = @("storage", "bootstrap\cache")
+foreach ($folder in $folders) {
+    $acl = Get-Acl $folder
+    $rule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+        "Everyone", "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow"
+    )
+    $acl.SetAccessRule($rule)
+    Set-Acl $folder $acl
+}
+
+php artisan storage:link
+```
+
+**7. Install frontend dependencies**
+```bash
+npm install
+npm run dev
+```
+
+**8. Run the project**
+```bash
+php artisan serve
+```
+
+Visit: http://127.0.0.1:8000
+
+---
+
+## Notes
+- `.env` file কখনো git এ push করবেন না
+- Clone করার পর সবসময় `composer install` চালাতে হবে (`vendor/` folder git এ নেই)
+- Database `.sql` file আলাদাভাবে share করা হবে
+- Storage folder এ write permission থাকতে হবে

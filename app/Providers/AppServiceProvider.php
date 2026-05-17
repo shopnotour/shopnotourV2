@@ -50,7 +50,7 @@ class AppServiceProvider extends ServiceProvider
         view()->composer('*', function ($view) {
             if (Auth::check()) {
                 $view->with('pendingB2B', \Modules\Vendor\Models\VendorRequest::where('user_id', Auth::id())
-//                    ->where('status', 'pending')
+                    ->where('status', 'pending')
                     ->exists());
             }
         });

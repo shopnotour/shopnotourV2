@@ -24,18 +24,18 @@ class RedirectToInstaller
      */
     public function handle($request, Closure $next, $guard = null)
     {
-        if (strpos($request->path(),'install') === false && !file_exists(storage_path().'/installed')  and !$this->inExceptArray($request)) {
-
-            return redirect('/install');
-        }
-
-        if(strpos($request->path(),'install') !== false ){
-            if(!file_exists(base_path('.env')))
-            {
-                // copy file .env.example to .env
-                copy(base_path('.env.example'),base_path('.env'));
-            }
-        }
+//        if (strpos($request->path(),'install') === false && !file_exists(storage_path().'/installed')  and !$this->inExceptArray($request)) {
+//
+//            return redirect('/install');
+//        }
+//
+//        if(strpos($request->path(),'install') !== false ){
+//            if(!file_exists(base_path('.env')))
+//            {
+//                // copy file .env.example to .env
+//                copy(base_path('.env.example'),base_path('.env'));
+//            }
+//        }
 
         return $next($request);
     }

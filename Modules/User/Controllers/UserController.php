@@ -94,6 +94,78 @@ class UserController extends FrontendController
 
 
 
+//    public function profileUpdate(Request $request)
+//    {
+//        if (is_demo_mode()) {
+//            return back()->with('error', "Demo mode: disabled");
+//        }
+//
+//        $user = Auth::user();
+//
+//        $request->validate([
+//            'first_name'            => 'nullable|max:255',
+//            'last_name'             => 'nullable|max:255',
+//            'email'                 => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+//            'user_name'             => ['nullable', 'max:255', 'min:4', 'string', 'alpha_dash', Rule::unique('users')->ignore($user->id)],
+//            'phone' => ['nullable'],
+//            'iata_number'           => 'nullable|string|max:100',
+//            'civil_aviation_number' => 'nullable|string|max:100',
+//            'trade_license_number'  => 'nullable|string|max:100',
+//            'avatar_file'           => 'nullable|file|image|max:2048',
+//            'iata_file'             => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+//            'civil_aviation_file'   => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+//            'trade_license_file'    => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+//        ], [
+//            'user_name.required' => __('The User name field is required.'),
+//        ]);
+//
+//        $input = $request->except(['bio', 'avatar_file', 'iata_file', 'civil_aviation_file', 'trade_license_file']);
+//        $user->fill($input);
+//        $user->bio = clean($request->input('bio'));
+//
+//        if ($user->birthday) {
+//            $user->birthday = date("Y-m-d", strtotime($user->birthday));
+//        }
+//
+//        if ($request->filled('user_name')) {
+//            $user->user_name = Str::slug($request->input('user_name'), "_");
+//        }
+//
+//        // ── Avatar ──
+//        if ($request->hasFile('avatar_file')) {
+//            $this->deleteOldMedia($user->avatar_id);
+//            $user->avatar_id = $this->saveToMedia($request->file('avatar_file'), 'avatar');
+//        }
+//
+//        // ── Agency files ──
+//        if ($request->hasFile('iata_file')) {
+//            $this->deleteOldMedia($user->iata_file_id);
+//            $user->iata_file_id = $this->saveToMedia($request->file('iata_file'), 'agency/iata');
+//        }
+//
+//        if ($request->hasFile('civil_aviation_file')) {
+//            $this->deleteOldMedia($user->civil_aviation_file_id);
+//            $user->civil_aviation_file_id = $this->saveToMedia($request->file('civil_aviation_file'), 'agency/civil');
+//        }
+//
+//        if ($request->hasFile('trade_license_file')) {
+//            $this->deleteOldMedia($user->trade_license_file_id);
+//            $user->trade_license_file_id = $this->saveToMedia($request->file('trade_license_file'), 'agency/trade');
+//        }
+//
+//        $user->save();
+//
+//        // ── Email change — re-verification ──
+//        if ($user->wasChanged('email')) {
+//            $user->email_verified_at = null;
+//            $user->save();
+//            $user->sendEmailVerificationNotification();
+//            return redirect()->back()->with('success', __('Profile updated. Please check your new email for verification link.'));
+//        }
+//
+//        return redirect()->back()->with('success', __('Update successfully'));
+//    }
+
     public function profileUpdate(Request $request)
     {
         if (is_demo_mode()) {
@@ -106,7 +178,7 @@ class UserController extends FrontendController
             'first_name'            => 'nullable|max:255',
             'last_name'             => 'nullable|max:255',
             'email'                 => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'user_name'             => ['nullable', 'max:255', 'min:4', 'string', 'alpha_dash', Rule::unique('users')->ignore($user->id)],
+            'user_name' => ['nullable', 'max:255', 'min:4', 'string', Rule::unique('users')->ignore($user->id)],
             'phone' => ['nullable'],
             'iata_number'           => 'nullable|string|max:100',
             'civil_aviation_number' => 'nullable|string|max:100',
@@ -127,8 +199,24 @@ class UserController extends FrontendController
             $user->birthday = date("Y-m-d", strtotime($user->birthday));
         }
 
-        if ($request->filled('user_name')) {
-            $user->user_name = Str::slug($request->input('user_name'), "_");
+        $userNameInput = $request->input('user_name');
+
+        // If user_name is provided
+        if (!empty($userNameInput)) {
+            $user->user_name = Str::of($userNameInput)
+                ->trim()
+                ->squish()              // removes extra spaces inside string
+                ->replace(' ', '_');    // convert spaces to underscore
+        } else {
+            // fallback: first_name + last_name
+            $first = $request->input('first_name');
+            $last  = $request->input('last_name');
+
+            if ($first || $last) {
+                $user->user_name = Str::of(trim($first . ' ' . $last))
+                    ->squish()
+                    ->replace(' ', '_');
+            }
         }
 
         // ── Avatar ──

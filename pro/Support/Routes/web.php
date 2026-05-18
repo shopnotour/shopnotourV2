@@ -35,3 +35,11 @@ Route::prefix('support')->name('support.')->group(function () {
         Route::post('/update/{id}', 'NoteController@update')->name('update');
     });
 });
+// start
+Route::prefix('user/support')->name('user.support.')->middleware('auth')->group(function () {
+    Route::get('/tickets', 'Ticket\TicketController@userIndex')->name('ticket.index');
+    Route::get('/ticket/create', 'Ticket\TicketController@userCreate')->name('ticket.create');
+    Route::get('/ticket/detail/{id}', 'Ticket\TicketController@userDetail')->name('ticket.detail');
+});
+
+//end

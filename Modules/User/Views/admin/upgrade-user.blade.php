@@ -29,6 +29,12 @@
             <div class="panel-body">
                 <form action="" class="bravo-form-item">
                     <div class="table-responsive">
+                        {{-- modify modify by rahat start --}}
+                        <div class="col-right" style="margin-bottom:10px;">
+                            <label>{{ __('Search') }}:</label>
+                            <input type="text" id="upgradeSearch" class="form-control" placeholder="{{ __('Search by name, email, role, status...') }}" style="width:300px;display:inline-block;">
+                        </div>
+                        {{-- modify end --}}
                     <table class="table table-hover">
                         <thead>
                         <tr>
@@ -97,7 +103,36 @@
                     form.find('select').val('approved');
                     form.submit();
                 }
-            })
+                // modify by rahat start 
+            });
+
+            $('#upgradeSearch').on('keyup', function () {
+                const query = $(this).val().toLowerCase().trim();
+                let visibleCount = 0;
+
+                $('.table tbody tr').each(function () {
+                    const text = $(this).text().toLowerCase();
+                    if (text.includes(query)) {
+                        $(this).show();
+                        visibleCount++;
+                    } else {
+                        $(this).hide();
+                    }
+                });
+
+                const $noResults = $('#upgradeNoResults');
+                if (visibleCount === 0) {
+                    if (!$noResults.length) {
+                        $('.table tbody').append(
+                            '<tr id="upgradeNoResults"><td colspan="9" class="text-center">{{ __("No matching records found") }}</td></tr>'
+                        );
+                    }
+                    $noResults.show();
+                } else {
+                    $noResults.hide();
+                }
+            });
+            // modify end
         })
     </script>
 @endpush

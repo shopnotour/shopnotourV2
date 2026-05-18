@@ -100,15 +100,15 @@ class ModuleProvider extends ModuleServiceProvider
     }
 
     public static function getUserMenu()
-    {
-//        if (!isPro()) return [];
+    { //modify by rahat start 
         return [
             'support' => [
-                'url'   => route('support.ticket.index'),
-//                'url'   => '#',
+                'url'   => route('user.support.ticket.index'),
                 'title' => __("Support Center"),
+                'icon'  => 'fa fa-life-ring',
                 'permission' => 'support_ticket_create',
+                'position'   => 30
             ]
         ];
-    }
+    } // modify end
 }

@@ -60,11 +60,12 @@ class ModuleProvider extends ModuleServiceProvider
                     'url'   => route('user.admin.index'),
                     'title' => __('All Users'),
                     'icon'  => 'fa fa-user',
+                    'permission' => 'user_all', //modify by rahat
                 ],
                 'role'=>[
                     'url'        => route('user.admin.role.index'),
                     'title'      => __('Role Manager'),
-                    'permission' => 'role_view',
+                    'permission' => 'user_role', //modify by rahat
                     'icon'       => 'fa fa-lock',
                 ],
                 'subscriber'=>[
@@ -75,7 +76,7 @@ class ModuleProvider extends ModuleServiceProvider
                 'userUpgradeRequest'=>[
                     'url'        => route('user.admin.upgrade'),
                     'title'      => __('Upgrade Request :count',['count'=>$noti_upgrade ? sprintf('<span class="badge badge-warning">%d</span>',$noti_upgrade) : '']),
-                    'permission' => 'user_view',
+                    'permission' => 'user_vendor_approved', //modify by rahat
                 ],
             ]
         ];
@@ -85,7 +86,7 @@ class ModuleProvider extends ModuleServiceProvider
             $options['children']['user_verification'] = [
                 'url'        => route('user.admin.verification.index'),
                 'title'      => __('Verification Request :count',['count'=>$noti_verify ? sprintf('<span class="badge badge-warning">%d</span>',$noti_verify) : '']),
-                'permission' => 'user_view',
+                'permission' => 'user_validation', //modify by rahat
             ];
         }
 

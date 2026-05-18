@@ -36,11 +36,11 @@ class TravelPortPNRResponseParser
                 return $this->buildError('UniversalRecord not found');
             }
 
-            $ur = $universalRecord[0];
+            $ur     = $universalRecord[0];
             $this->registerNamespaces($ur);
             $urAttr = $ur->attributes();
 
-            // ── Core Parsing ─────────────────────────────────────────────
+            // ── Core Parsing ──────────────────────────────────────────────
             $providerInfo    = $this->parseProviderReservationInfo($xml);
             $supplierLocator = $this->parseSupplierLocator($xml);
             $airReservation  = $this->parseAirReservation($xml);
@@ -49,68 +49,68 @@ class TravelPortPNRResponseParser
             $pricing         = $this->parsePricing($xml, $flights);
             $agencyInfo      = $this->parseAgencyInfo($ur);
             $remarks         = $this->parseRemarks($ur);
-            $actionStatus = $this->parseActionStatus($ur, $xml, $remarks);
+            $actionStatus    = $this->parseActionStatus($ur, $xml, $remarks);
 
-            // ── Derived ──────────────────────────────────────────────────
-            $journeys     = $this->buildJourneys($flights);
-            $allSegments  = $this->buildAllSegments($flights);
-            $contactInfo  = $this->buildContactInfo($travelers);
-            $specialSvcs  = $this->buildSpecialServices($travelers);
+            // ── Derived ───────────────────────────────────────────────────
+            $journeys    = $this->buildJourneys($flights);
+            $allSegments = $this->buildAllSegments($flights);
+            $contactInfo = $this->buildContactInfo($travelers);
+            $specialSvcs = $this->buildSpecialServices($travelers);
 
             $startDate = $flights[0]['departureDate'] ?? '';
             $endDate   = !empty($flights) ? end($flights)['arrivalDate'] : '';
 
-            // ── FIX: Use ProviderReservationInfo LocatorCode as booking_id ──
             $providerLocatorCode = $providerInfo['locator_code'] ?? '';
 
+            // ── Plating carrier (for ticket airline_code fallback) ─────────
+            $platingCarrier = $this->parsePlatingCarrier($xml);
+
             return [
-                'success'            => true,
-                'trace_id'           => (string) rand(1000, 9999),
-                'transaction_id'     => strtoupper(md5($providerLocatorCode . microtime())),
-                'response_time'      => 0,
+                'success'           => true,
+                'trace_id'          => (string) rand(1000, 9999),
+                'transaction_id'    => strtoupper(md5($providerLocatorCode . microtime())),
+                'response_time'     => 0,
 
-                'booking_id'         => $providerLocatorCode,
-                'start_date'         => $startDate,
-                'end_date'           => $endDate,
-                'is_cancelable'      => true,
-                'is_ticketed'        => $this->checkTicketed($xml),
-                'timestamp'          => now()->toIso8601String(),
-                'booking_signature'  => hash('sha256', $providerLocatorCode . microtime()),
+                'booking_id'        => $providerLocatorCode,
+                'start_date'        => $startDate,
+                'end_date'          => $endDate,
+                'is_cancelable'     => true,
+                'is_ticketed'       => $this->checkTicketed($xml),
+                'timestamp'         => now()->toIso8601String(),
+                'booking_signature' => hash('sha256', $providerLocatorCode . microtime()),
 
-                'contact_info'       => $contactInfo,
+                'contact_info' => $contactInfo,
 
-                // ── FIX: universal_record uses ProviderReservationInfo LocatorCode ──
                 'universal_record' => [
-                    'locator_code'     => $providerLocatorCode,        // আগের মতোই (blade এ কোনো change নেই)
-                    'ur_locator_code' => (string)($urAttr['LocatorCode'] ?? ''), // ✅ নতুন key
-                    'version'          => 0,
-                    'status'           => 'Active',
+                    'locator_code'    => $providerLocatorCode,
+                    'ur_locator_code' => (string) ($urAttr['LocatorCode'] ?? ''),
+                    'version'         => (int) ($urAttr['Version'] ?? 0),
+                    'status'          => (string) ($urAttr['Status'] ?? 'Active'),
                 ],
 
                 'provider_reservation' => [
-                    'key'              => $providerInfo['key'] ?? '',
-                    'provider_code'    => $providerInfo['provider_code'] ?? '1G',
-                    'locator_code'     => $providerLocatorCode,
-                    'create_date'      => $providerInfo['create_date'] ?? '',
-                    'modified_date'    => $providerInfo['modified_date'] ?? '',
-                    'host_create_date' => $providerInfo['host_create_date'] ?? '',
-                    'owning_pcc'       => $providerInfo['owning_pcc'] ?? '',
-                    'home_pcc'         => $providerInfo['owning_pcc'] ?? '',
-                    'prime_host_id'    => '1G',
-                    'number_of_updates'=> 0,
-                    'display_details'  => $providerInfo['details'] ?? [],
+                    'key'               => $providerInfo['key']              ?? '',
+                    'provider_code'     => $providerInfo['provider_code']    ?? '1G',
+                    'locator_code'      => $providerLocatorCode,
+                    'create_date'       => $providerInfo['create_date']      ?? '',
+                    'modified_date'     => $providerInfo['modified_date']    ?? '',
+                    'host_create_date'  => $providerInfo['host_create_date'] ?? '',
+                    'owning_pcc'        => $providerInfo['owning_pcc']       ?? '',
+                    'home_pcc'          => $providerInfo['owning_pcc']       ?? '',
+                    'prime_host_id'     => '1G',
+                    'number_of_updates' => 0,
+                    'display_details'   => $providerInfo['details']          ?? [],
                 ],
 
                 'supplier_locator' => [
-                    'supplier_code'    => $supplierLocator['supplier_code'] ?? '',
-                    'locator_code'     => $supplierLocator['locator_code'] ?? '',
+                    'supplier_code'    => $supplierLocator['supplier_code']    ?? '',
+                    'locator_code'     => $supplierLocator['locator_code']     ?? '',
                     'create_date_time' => $supplierLocator['create_date_time'] ?? '',
                 ],
 
-                // ── FIX: air_reservation uses ProviderReservationInfo LocatorCode ──
                 'air_reservation' => [
                     'locator_code'  => $providerLocatorCode,
-                    'create_date'   => $airReservation['create_date'] ?? '',
+                    'create_date'   => $airReservation['create_date']   ?? '',
                     'modified_date' => $airReservation['modified_date'] ?? '',
                 ],
 
@@ -131,11 +131,20 @@ class TravelPortPNRResponseParser
                 'action_status' => $actionStatus,
                 'agency_info'   => $agencyInfo,
 
-                'special_services'  => $specialSvcs,
-                'pricing'           => $pricing,
-                'fare_rules'        => $this->buildFareRules($xml),
-                'flight_tickets'    => $this->parseFlightTickets($xml),
-                'accounting_items'  => [],
+                'special_services' => $specialSvcs,
+                'pricing'          => $pricing,
+                'fare_rules'       => $this->buildFareRules($xml),
+                'flight_tickets'   => $this->parseFlightTickets($xml, $platingCarrier),
+                'accounting_items' => [],
+
+                // ── TravelPort extra (Sabre তে নেই, পরে কাজে লাগতে পারে) ──
+                '_tp_extra' => [
+                    'osi_remarks'          => $this->parseOSI($ur),
+                    'action_status_remark' => $this->parseActionStatusRemark($ur),
+                    'purge_date'           => $providerInfo['details']['p_n_r_purge_date'] ?? '',
+                    'iata_number'          => $providerInfo['details']['creating_agency_i_a_t_a'] ?? '',
+                    'creating_agent_duty'  => $providerInfo['details']['creating_agent_duty'] ?? '',
+                ],
             ];
 
         } catch (\Exception $e) {
@@ -148,12 +157,15 @@ class TravelPortPNRResponseParser
         }
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    //  FLIGHT TICKETS  (Sabre buildFlightTickets এর মতো — exchange-aware)
+    // ═══════════════════════════════════════════════════════════════════════
 
-    private function parseFlightTickets(SimpleXMLElement $xml): array
+    private function parseFlightTickets(SimpleXMLElement $xml, string $platingCarrier = ''): array
     {
         $tickets = [];
 
-        // ── Step 1: Traveler Key → Index map ──────────────────────────
+        // ── Step 1: Traveler Key → Index map ──────────────────────────────
         $travelerKeyMap = [];
         foreach ($this->safeXpath($xml, '//com:BookingTraveler') as $idx => $t) {
             $attr = $t->attributes();
@@ -163,9 +175,38 @@ class TravelPortPNRResponseParser
             }
         }
 
-        // ── Step 2: SSR TKNE → coupon map (travelerRef → coupons[]) ───
-        // FreeText format: "7799412104183C1" → ticket number + coupon
-        $tkneMap = []; // travelerRef → [ ['number'=>..., 'coupon'=>...], ... ]
+        // ── Step 2: AirPricingInfo Key → pricing data map ──────────────────
+        $pricingMap = [];
+        foreach ($this->safeXpath($xml, '//air:AirPricingInfo') as $pn) {
+            $pna = $pn->attributes();
+            $key = (string) ($pna['Key'] ?? '');
+            if ($key) {
+                $totalStr   = (string) ($pna['ApproximateTotalPrice'] ?? $pna['TotalPrice'] ?? '');
+                $taxStr     = (string) ($pna['Taxes'] ?? '');
+                $baseStr    = (string) ($pna['ApproximateBasePrice'] ?? $pna['EquivalentBasePrice'] ?? '');
+                $pricingMap[$key] = [
+                    'total'    => $this->extractAmount($totalStr),
+                    'taxes'    => $this->extractAmount($taxStr),
+                    'subtotal' => $this->extractAmount($baseStr),
+                    'currency' => $this->extractCurrency($totalStr ?: 'BDT0'),
+                ];
+            }
+        }
+
+        // ── Step 3: TicketingModifiers PlatingCarrier map ──────────────────
+        // key = TicketingModifiersRef Key → PlatingCarrier
+        $tmCarrierMap = [];
+        foreach ($this->safeXpath($xml, '//air:TicketingModifiers') as $tm) {
+            $tma = $tm->attributes();
+            $key = (string) ($tma['Key'] ?? '');
+            if ($key) {
+                $tmCarrierMap[$key] = (string) ($tma['PlatingCarrier'] ?? $platingCarrier);
+            }
+        }
+
+        // ── Step 4: SSR TKNE → coupon map (segmentRef → coupon info) ──────
+        // FreeText format: "9979412260059C1" → ticketNumber + coupon
+        $tkneMap = []; // travelerRef → [ ['ticket_number'=>..., 'coupon_number'=>..., 'segment_ref'=>...], ... ]
         foreach ($this->safeXpath($xml, '//com:BookingTraveler') as $t) {
             $tAttr       = $t->attributes();
             $travelerRef = (string) ($tAttr['Key'] ?? '');
@@ -174,96 +215,190 @@ class TravelPortPNRResponseParser
                 $sAttr = $ssr->attributes();
                 if ((string) ($sAttr['Type'] ?? '') !== 'TKNE') continue;
 
-                $freeText = (string) ($sAttr['FreeText'] ?? '');
-                // e.g. "7799412104183C1" — last char is coupon number
+                $freeText   = (string) ($sAttr['FreeText'] ?? '');
+                $segmentRef = (string) ($sAttr['SegmentRef'] ?? '');
+
+                // e.g. "9979412260059C1" — last char(s) after C is coupon number
                 if (preg_match('/^(\d+)C(\d+)$/', $freeText, $m)) {
                     $tkneMap[$travelerRef][] = [
                         'ticket_number' => $m[1],
                         'coupon_number' => (int) $m[2],
+                        'segment_ref'   => $segmentRef,
+                        'status'        => (string) ($sAttr['Status'] ?? 'HK'),
                     ];
                 }
             }
         }
 
-        // ── Step 3: TicketInfo → main ticket data ──────────────────────
+        // ── Step 5: TicketInfo → main ticket data ──────────────────────────
         foreach ($this->safeXpath($xml, '//air:TicketInfo') as $ticket) {
             $attr        = $ticket->attributes();
             $travelerRef = (string) ($attr['BookingTravelerRef'] ?? '');
             $ticketNum   = (string) ($attr['Number'] ?? '');
             $issueDate   = (string) ($attr['TicketIssueDate'] ?? '');
+            $pricingRef  = (string) ($attr['AirPricingInfoRef'] ?? '');
 
             // Name
             $nameNodes = $this->safeXpath($ticket, './/com:Name');
-            $name      = [];
+            $passengerName = [];
             if (!empty($nameNodes)) {
-                $na   = $nameNodes[0]->attributes();
-                $name = [
+                $na = $nameNodes[0]->attributes();
+                $passengerName = [
                     'first' => (string) ($na['First'] ?? ''),
-                    'last'  => (string) ($na['Last'] ?? ''),
+                    'last'  => (string) ($na['Last']  ?? ''),
                 ];
             }
 
-            // Traveler index
+            // Traveler index (1-based, Sabre মতো)
             $travelerIndex = $travelerKeyMap[$travelerRef] ?? null;
 
-            // Status — Travelport TicketInfo Status="N" মানে issued
-            $rawStatus   = (string) ($attr['Status'] ?? '');
-            $statusName  = match ($rawStatus) {
-                'N', 'n' => 'Issued',
+            // Ticket status — TravelPort: S=Issued, N=Issued, V=Voided, R=Refunded, E=Exchanged
+            $rawStatus = strtoupper((string) ($attr['Status'] ?? ''));
+            $statusName = match ($rawStatus) {
+                'S', 'N' => 'Issued',
                 'V'      => 'Voided',
                 'R'      => 'Refunded',
                 'E'      => 'Exchanged',
+                'X'      => 'Expired',
                 default  => 'Issued',
             };
-            $statusCode  = match ($rawStatus) {
-                'N', 'n' => 'TE',
+            $statusCode = match ($rawStatus) {
+                'S', 'N' => 'TE',
                 'V'      => 'TV',
                 'R'      => 'TR',
                 'E'      => 'TX',
+                'X'      => 'TX',
                 default  => 'TE',
             };
 
-            // Flight coupons — SSR TKNE থেকে
+            // Airline code — TicketingModifiersRef → PlatingCarrier
+            $tmRefKey   = (string) ($attr['TicketingModifiersRef'] ?? '');
+            $airlineCode = $tmCarrierMap[$tmRefKey] ?? $platingCarrier;
+
+            // Payment — AirPricingInfoRef থেকে match
+            $payment = null;
+            if (!empty($pricingRef) && isset($pricingMap[$pricingRef])) {
+                $pm = $pricingMap[$pricingRef];
+                $payment = [
+                    'subtotal' => $pm['subtotal'],
+                    'taxes'    => $pm['taxes'],
+                    'total'    => $pm['total'],
+                    'currency' => $pm['currency'],
+                ];
+            }
+
+            // Flight coupons — SSR TKNE থেকে (Sabre flightCoupons এর মতো)
             $flightCoupons = [];
             foreach ($tkneMap[$travelerRef] ?? [] as $tkne) {
-                if ($tkne['ticket_number'] === $ticketNum) {
-                    $flightCoupons[] = [
-                        'item_id'            => (string) $tkne['coupon_number'],
-                        'coupon_status'      => 'Not Flown',
-                        'coupon_status_code' => 'I',
-                    ];
+                if ($tkne['ticket_number'] !== $ticketNum) continue;
+
+                // Coupon status: HK = Not Flown (I), TKNE status থেকে map করো
+                $couponStatusCode = 'I'; // Not Flown (default for issued tickets)
+                $couponStatusName = 'Not Flown';
+
+                $flightCoupons[] = [
+                    'item_id'            => (string) $tkne['coupon_number'],
+                    'coupon_status'      => $couponStatusName,
+                    'coupon_status_code' => $couponStatusCode,
+                    // TravelPort extra
+                    '_segment_ref'       => $tkne['segment_ref'],
+                    '_tkne_status'       => $tkne['status'],
+                ];
+            }
+
+            // ── Exchange detection (Sabre buildFlightTickets এর মতো) ──────
+            $exchangeCodes = ['E', 'R', 'V'];
+            $activeCodes   = ['I', 'O', 'F', 'B'];
+
+            // Ticket level: E/R/V status মানে exchanged/refunded/voided
+            $isExchanged       = in_array($rawStatus, ['E', 'R', 'V']);
+            $allExchanged      = $isExchanged; // ticket level এ সব coupon effectively exchanged
+            $isPartialExchange = false;
+
+            // Coupon level check
+            if (!empty($flightCoupons)) {
+                $hasExchangeCoupon = collect($flightCoupons)->some(
+                    fn($c) => in_array($c['coupon_status_code'] ?? '', $exchangeCodes)
+                );
+                $allCouponsExchanged = collect($flightCoupons)->every(
+                    fn($c) => in_array($c['coupon_status_code'] ?? '', $exchangeCodes)
+                );
+                $hasActiveCoupon = collect($flightCoupons)->some(
+                    fn($c) => in_array($c['coupon_status_code'] ?? '', $activeCodes)
+                );
+
+                if ($hasExchangeCoupon) {
+                    $isExchanged       = true;
+                    $allExchanged      = $allCouponsExchanged;
+                    $isPartialExchange = $hasExchangeCoupon && $hasActiveCoupon && !$allCouponsExchanged;
                 }
             }
 
-            // Issue date format — Sabre এর মতো শুধু date part
-            $issueDateFormatted = $issueDate ? substr($issueDate, 0, 10) : null;
+            // Issue date — শুধু date part (Sabre এর 'date' key এর মতো)
+            $issueDateFormatted = !empty($issueDate) ? substr($issueDate, 0, 10) : null;
+
+            // Commission — TravelPort TicketInfo এ নেই, null রাখো
+            // (accounting_items এ পরে add করা যাবে)
+            $commissionAmount   = null;
+            $commissionCurrency = null;
+            $commissionPct      = null;
+
+            // TicketingModifiers থেকে commission নেওয়ার চেষ্টা
+            foreach ($this->safeXpath($xml, '//air:TicketingModifiers') as $tm) {
+                $tma = $tm->attributes();
+                if ((string) ($tma['Key'] ?? '') === $tmRefKey) {
+                    $commNodes = $this->safeXpath($tm, './/com:Commission');
+                    if (!empty($commNodes)) {
+                        $ca                 = $commNodes[0]->attributes();
+                        $commissionPct      = (string) ($ca['Percentage'] ?? null);
+                        $commissionAmount   = null; // percentage থেকে amount calculate করতে payment লাগবে
+                        $commissionCurrency = $payment['currency'] ?? null;
+
+                        // Commission amount = base * percentage / 100
+                        if ($commissionPct && isset($payment['subtotal'])) {
+                            $commissionAmount = number_format(
+                                (float)$payment['subtotal'] * (float)$commissionPct / 100,
+                                2, '.', ''
+                            );
+                        }
+                    }
+                    break;
+                }
+            }
 
             $tickets[] = [
-                'number'             => $ticketNum,
-                'date'               => $issueDateFormatted,    // ← Sabre এর 'date' key এর মতো
-                'airline_code'       => (string) ($attr['Carrier'] ?? 'BS'),
-                'agency_iata'        => (string) ($attr['IATANumber'] ?? ''),
-                'traveler_index'     => $travelerIndex,          // ← Blade match এর জন্য
-                'ticket_status'      => $statusName,             // ← 'Issued'
-                'ticket_status_code' => $statusCode,             // ← 'TE'
-                'ticketing_pcc'      => (string) ($attr['TicketingAgentSignOn'] ?? ''),
+                // ── Sabre compatible keys ──────────────────────────────────
+                'number'              => $ticketNum,
+                'date'                => $issueDateFormatted,
+                'airline_code'        => $airlineCode,
+                'agency_iata'         => (string) ($attr['IATANumber'] ?? ''),
+                'traveler_index'      => $travelerIndex,
+                'ticket_status'       => $statusName,
+                'ticket_status_code'  => $statusCode,
+                'ticketing_pcc'       => (string) ($attr['TicketingAgentSignOn'] ?? ''),
+                'is_exchanged'        => $isExchanged,
+                'is_partial_exchange' => $isPartialExchange,
+                'all_exchanged'       => $allExchanged,
+                'payment'             => $payment,
+                'flight_coupons'      => $flightCoupons,
+                'commission_amount'   => $commissionAmount,
+                'commission_currency' => $commissionCurrency,
+                'commission_percentage' => $commissionPct,
 
-                'payment' => [
-                    'subtotal' => null,
-                    'taxes'    => null,
-                    'total'    => null,
-                    'currency' => null,
+                // ── TravelPort extra (পরে কাজে লাগতে পারে) ──────────────
+                '_tp_extra' => [
+                    'passenger_name'   => $passengerName,
+                    'traveler_ref'     => $travelerRef,
+                    'pricing_info_ref' => $pricingRef,
+                    'raw_status'       => $rawStatus,
+                    'country_code'     => (string) ($attr['CountryCode'] ?? ''),
                 ],
-
-                'flight_coupons' => $flightCoupons,              // ← Sabre এর মতো same structure
-
-                // Extra (blade এ দরকার না হলেও রাখা ভালো)
-                'passenger_name' => $name,
             ];
         }
 
         return $tickets;
     }
+
     // ═══════════════════════════════════════════════════════════════════════
     //  PROVIDER / SUPPLIER / AIR RESERVATION
     // ═══════════════════════════════════════════════════════════════════════
@@ -281,14 +416,14 @@ class TravelPortPNRResponseParser
         }
 
         return [
-            'key'             => (string) ($attr['Key'] ?? ''),
-            'provider_code'   => (string) ($attr['ProviderCode'] ?? '1G'),
-            'locator_code'    => (string) ($attr['LocatorCode'] ?? ''),
-            'create_date'     => (string) ($attr['CreateDate'] ?? ''),
-            'modified_date'   => (string) ($attr['ModifiedDate'] ?? ''),
-            'host_create_date'=> (string) ($attr['HostCreateDate'] ?? ''),
-            'owning_pcc'      => (string) ($attr['OwningPCC'] ?? ''),
-            'details'         => $details,
+            'key'              => (string) ($attr['Key']          ?? ''),
+            'provider_code'    => (string) ($attr['ProviderCode'] ?? '1G'),
+            'locator_code'     => (string) ($attr['LocatorCode']  ?? ''),
+            'create_date'      => (string) ($attr['CreateDate']   ?? ''),
+            'modified_date'    => (string) ($attr['ModifiedDate'] ?? ''),
+            'host_create_date' => (string) ($attr['HostCreateDate'] ?? ''),
+            'owning_pcc'       => (string) ($attr['OwningPCC']    ?? ''),
+            'details'          => $details,
         ];
     }
 
@@ -299,9 +434,9 @@ class TravelPortPNRResponseParser
 
         $attr = $nodes[0]->attributes();
         return [
-            'supplier_code'    => (string) ($attr['SupplierCode'] ?? ''),
+            'supplier_code'    => (string) ($attr['SupplierCode']        ?? ''),
             'locator_code'     => (string) ($attr['SupplierLocatorCode'] ?? ''),
-            'create_date_time' => (string) ($attr['CreateDateTime'] ?? ''),
+            'create_date_time' => (string) ($attr['CreateDateTime']      ?? ''),
         ];
     }
 
@@ -312,10 +447,17 @@ class TravelPortPNRResponseParser
 
         $attr = $nodes[0]->attributes();
         return [
-            'locator_code'  => (string) ($attr['LocatorCode'] ?? ''),
-            'create_date'   => (string) ($attr['CreateDate'] ?? ''),
+            'locator_code'  => (string) ($attr['LocatorCode']  ?? ''),
+            'create_date'   => (string) ($attr['CreateDate']   ?? ''),
             'modified_date' => (string) ($attr['ModifiedDate'] ?? ''),
         ];
+    }
+
+    private function parsePlatingCarrier(SimpleXMLElement $xml): string
+    {
+        $nodes = $this->safeXpath($xml, '//air:TicketingModifiers');
+        if (empty($nodes)) return '';
+        return (string) ($nodes[0]->attributes()['PlatingCarrier'] ?? '');
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -335,6 +477,8 @@ class TravelPortPNRResponseParser
             $emails = $this->parseEmails($t);
             $ssrs   = $this->parseSSRs($t);
             $docs   = $this->parseIdentityDocuments($ssrs, $name, $attr);
+            $seats  = $this->parseSeatAssignments($t);
+            $fqtvs  = $this->parseFQTV($t);
 
             $travelers[] = [
                 'givenName'         => $name['first'],
@@ -343,14 +487,18 @@ class TravelPortPNRResponseParser
                 'type'              => $this->mapTravelerType((string) ($attr['TravelerType'] ?? 'ADT')),
                 'passengerCode'     => (string) ($attr['TravelerType'] ?? 'ADT'),
                 'nameAssociationId' => (string) $index,
-                'dob'               => (string) ($attr['DOB'] ?? ''),
+                'dob'               => (string) ($attr['DOB']    ?? ''),
                 'gender'            => (string) ($attr['Gender'] ?? ''),
                 'emails'            => array_column($emails, 'email'),
                 'phones'            => array_map(fn($p) => [
-                    'number' => $p['number'],
-                    'label'  => $p['type'] === 'Mobile' ? 'M' : 'H',
+                    'number'       => $p['number'],
+                    'label'        => $p['type'] === 'Mobile' ? 'M' : 'H',
+                    'country_code' => $p['country_code'],
+                    'location'     => $p['location'],
                 ], $phones),
                 'identityDocuments' => $docs,
+                'seatAssignments'   => $seats,
+                'loyaltyPrograms'   => $fqtvs,
                 '_travelerKey'      => (string) ($attr['Key'] ?? ''),
                 '_ssrs'             => $ssrs,
             ];
@@ -358,6 +506,55 @@ class TravelPortPNRResponseParser
         }
 
         return $travelers;
+    }
+
+    private function parseSeatAssignments(SimpleXMLElement $traveler): array
+    {
+        $seats = [];
+        foreach ($this->safeXpath($traveler, './/com:AirSeatAssignment') as $sa) {
+            $attr   = $sa->attributes();
+            $seats[] = [
+                'seat'               => (string) ($attr['Seat']           ?? ''),
+                'status'             => (string) ($attr['Status']         ?? ''),
+                'segment_ref'        => (string) ($attr['SegmentRef']     ?? ''),
+                'flight_details_ref' => (string) ($attr['FlightDetailsRef'] ?? ''),
+            ];
+        }
+        return $seats;
+    }
+
+    private function parseFQTV(SimpleXMLElement $traveler): array
+    {
+        // TravelPort FQTV SSR থেকে loyalty programs parse করো
+        $programs = [];
+        foreach ($this->safeXpath($traveler, './/com:SSR') as $ssr) {
+            $attr = $ssr->attributes();
+            $type = (string) ($attr['Type'] ?? '');
+            if ($type !== 'FQTV') continue;
+
+            $freeText = (string) ($attr['FreeText'] ?? '');
+            $carrier  = (string) ($attr['Carrier']  ?? '');
+
+            // FreeText format: "EK/1234567890" or "EK1234567890"
+            $programNumber = '';
+            if (preg_match('/([A-Z]{2})\/(.+)/', $freeText, $m)) {
+                $carrier       = $m[1];
+                $programNumber = $m[2];
+            } elseif (preg_match('/([A-Z]{2})(.+)/', $freeText, $m)) {
+                $carrier       = $m[1];
+                $programNumber = $m[2];
+            } else {
+                $programNumber = $freeText;
+            }
+
+            $programs[] = [
+                'supplier_code'  => $carrier,
+                'program_type'   => 'FFN',
+                'program_number' => trim($programNumber),
+                'receiver_code'  => $carrier,
+            ];
+        }
+        return $programs;
     }
 
     private function buildPassengers(array $travelers): array
@@ -369,60 +566,75 @@ class TravelPortPNRResponseParser
     {
         if (empty($traveler)) return [];
 
-        $phone          = $traveler['phones'][0] ?? [];
-        $passport       = null;
-        $secureFlightData = null;
+        $phone        = $traveler['phones'][0] ?? [];
+        $passport     = null;
+        $secureFlight = null;
 
         foreach ($traveler['identityDocuments'] ?? [] as $doc) {
-            if (($doc['documentType'] ?? '') === 'PASSPORT' && !$passport) {
-                $passport = $doc;
-            }
-            if (($doc['documentType'] ?? '') === 'SECURE_FLIGHT_PASSENGER_DATA' && !$secureFlightData) {
-                $secureFlightData = $doc;
-            }
+            $type = $doc['documentType'] ?? '';
+            if ($type === 'PASSPORT' && $passport === null)                         $passport     = $doc;
+            if ($type === 'SECURE_FLIGHT_PASSENGER_DATA' && $secureFlight === null) $secureFlight = $doc;
         }
 
         return [
-            'key'               => $traveler['_travelerKey'] ?? base64_encode(($traveler['givenName'] ?? '') . ($traveler['surname'] ?? '')),
-            'traveler_type'     => $traveler['passengerCode'] ?? 'ADT',
-            'passenger_type'    => $traveler['type'] ?? 'ADULT',
+            // ── Sabre compatible keys ──────────────────────────────────────
+            'key'                 => $traveler['_travelerKey'] ?? base64_encode(($traveler['givenName'] ?? '') . ($traveler['surname'] ?? '')),
+            'traveler_type'       => $traveler['passengerCode']     ?? 'ADT',
+            'passenger_type'      => $traveler['type']              ?? 'ADULT',
             'name_association_id' => $traveler['nameAssociationId'] ?? '1',
-            'gender'            => $this->shortGender($traveler['gender'] ?? $passport['gender'] ?? ''),
-            'dob'               => $traveler['dob'] ?? $passport['birthDate'] ?? '',
-            'prefix'            => $traveler['prefix'] ?? '',
-            'first_name'        => $traveler['givenName'] ?? '',
-            'last_name'         => $traveler['surname'] ?? '',
-            'phone'             => $phone['number'] ?? '',
-            'phone_label'       => $phone['label'] ?? '',
-            'phone_country_code'=> '',
-            'phone_location'    => '',
-            'email'             => $traveler['emails'][0] ?? '',
-            'emails'            => $traveler['emails'] ?? [],
-            'phones'            => $traveler['phones'] ?? [],
-            'passport_number'   => $passport['documentNumber'] ?? '',
-            'passport_type'     => 'Passport',
-            'passport_expiry'   => $passport['expiryDate'] ?? '',
-            'passport_country'  => $passport['issuingCountryCode'] ?? '',
-            'nationality'       => $passport['residenceCountryCode'] ?? '',
-            'is_primary_holder' => $passport['isPrimaryDocumentHolder'] ?? false,
-            'secure_flight'     => $secureFlightData ? [
-                'given_name' => $secureFlightData['givenName'] ?? '',
-                'surname'    => $secureFlightData['surname'] ?? '',
-                'birth_date' => $secureFlightData['birthDate'] ?? '',
-                'gender'     => $secureFlightData['gender'] ?? '',
+            'gender'              => $this->shortGender($traveler['gender'] ?? $passport['gender'] ?? ''),
+            'dob'                 => $traveler['dob'] ?? $passport['birthDate'] ?? '',
+            'prefix'              => $traveler['prefix'] ?? '',
+            'first_name'          => $traveler['givenName'] ?? '',
+            'last_name'           => $traveler['surname']   ?? '',
+            'phone'               => $phone['number'] ?? '',
+            'phone_label'         => $phone['label']  ?? '',
+            'phone_country_code'  => $phone['country_code'] ?? '',
+            'phone_location'      => $phone['location']     ?? '',
+            'email'               => $traveler['emails'][0] ?? '',
+            'emails'              => $traveler['emails']    ?? [],
+            'phones'              => $traveler['phones']    ?? [],
+
+            'passport_number'     => $passport['documentNumber']       ?? '',
+            'passport_type'       => 'Passport',
+            'passport_expiry'     => $passport['expiryDate']           ?? '',
+            'passport_country'    => $passport['issuingCountryCode']   ?? '',
+            'nationality'         => $passport['residenceCountryCode'] ?? '',
+            'is_primary_holder'   => $passport['isPrimaryDocumentHolder'] ?? false,
+
+            'secure_flight' => $secureFlight ? [
+                'given_name' => $secureFlight['givenName'] ?? '',
+                'surname'    => $secureFlight['surname']   ?? '',
+                'birth_date' => $secureFlight['birthDate'] ?? '',
+                'gender'     => $secureFlight['gender']    ?? '',
             ] : null,
+
             'identity_documents' => $traveler['identityDocuments'] ?? [],
+
+            // Sabre এ loyaltyPrograms আছে, TravelPort FQTV SSR থেকে
+            'loyalty_programs' => array_map(fn($lp) => [
+                'supplier_code'  => $lp['supplier_code']  ?? null,
+                'program_type'   => $lp['program_type']   ?? null,
+                'program_number' => $lp['program_number'] ?? null,
+                'receiver_code'  => $lp['receiver_code']  ?? null,
+            ], $traveler['loyaltyPrograms'] ?? []),
+
+            // ── TravelPort extra ───────────────────────────────────────────
+            '_tp_extra' => [
+                'seat_assignments' => $traveler['seatAssignments'] ?? [],
+                'ssrs'             => $traveler['_ssrs']           ?? [],
+            ],
         ];
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    //  FLIGHTS — root $xml + supplier locator code required
+    //  FLIGHTS
     // ═══════════════════════════════════════════════════════════════════════
 
     private function parseFlights(SimpleXMLElement $xml, string $supplierLocatorCode): array
     {
-        $flights      = [];
-        $index        = 10;
+        $flights       = [];
+        $index         = 10;
         $travelerCount = count($this->safeXpath($xml, '//com:BookingTraveler'));
 
         foreach ($this->safeXpath($xml, '//air:AirSegment') as $seg) {
@@ -432,17 +644,9 @@ class TravelPortPNRResponseParser
             $fdAttr  = !empty($fdNodes) ? $fdNodes[0]->attributes() : null;
 
             $depTime = (string) ($attr['DepartureTime'] ?? '');
-            $arrTime = (string) ($attr['ArrivalTime'] ?? '');
+            $arrTime = (string) ($attr['ArrivalTime']   ?? '');
 
-            // ── Connection duration ────────────────────────────────────
-            $connDuration = null;
-            $connNodes    = $this->safeXpath($seg, './/air:Connection');
-            if (!empty($connNodes)) {
-                $connAttr     = $connNodes[0]->attributes();
-                $connDuration = (int) ($connAttr['Duration'] ?? 0);
-            }
-
-            // ── Sell messages ──────────────────────────────────────────
+            // Sell messages — terminal info
             $sellMessages = [];
             foreach ($this->safeXpath($seg, './/com:SellMessage') as $sm) {
                 $msg = trim((string) $sm);
@@ -451,12 +655,17 @@ class TravelPortPNRResponseParser
                 }
             }
 
-            // ── Meals from SSR ─────────────────────────────────────────
+            // Connection
+            $connDuration = null;
+            foreach ($this->safeXpath($seg, './/air:Connection') as $conn) {
+                $connDuration = (int) ($conn->attributes()['Duration'] ?? 0);
+            }
+
+            // Meals from SSR
             $meals = $this->parseMealsForSegment($xml, (string) ($attr['Key'] ?? ''));
 
             $flights[] = [
                 'itemId'                => (string) $index,
-                // ── FIX: Use supplier locator code as confirmationId ──
                 'confirmationId'        => $supplierLocatorCode,
                 'sourceType'            => 'ATPCO',
                 'flightNumber'          => (int) ($attr['FlightNumber'] ?? 0),
@@ -465,13 +674,13 @@ class TravelPortPNRResponseParser
                 'operatingFlightNumber' => (int) ($attr['FlightNumber'] ?? 0),
                 'operatingAirlineCode'  => (string) ($attr['Carrier'] ?? ''),
                 'operatingAirlineName'  => $this->getAirlineName((string) ($attr['Carrier'] ?? '')),
-                'fromAirportCode'       => (string) ($attr['Origin'] ?? ''),
+                'fromAirportCode'       => (string) ($attr['Origin']      ?? ''),
                 'toAirportCode'         => (string) ($attr['Destination'] ?? ''),
                 'departureDate'         => $this->extractDate($depTime),
                 'departureTime'         => $this->extractTime($depTime),
                 'arrivalDate'           => $this->extractDate($arrTime),
                 'arrivalTime'           => $this->extractTime($arrTime),
-                'departureTerminalName' => $fdAttr ? (string) ($fdAttr['OriginTerminal'] ?? '') : '',
+                'departureTerminalName' => $fdAttr ? (string) ($fdAttr['OriginTerminal']      ?? '') : '',
                 'arrivalTerminalName'   => $fdAttr ? (string) ($fdAttr['DestinationTerminal'] ?? '') : '',
                 'numberOfSeats'         => $travelerCount,
                 'cabinTypeName'         => ucfirst(strtolower((string) ($attr['CabinClass'] ?? 'Economy'))),
@@ -483,16 +692,17 @@ class TravelPortPNRResponseParser
                 'flightStatusCode'      => (string) ($attr['Status'] ?? 'HK'),
                 'flightStatusName'      => $this->mapFlightStatus((string) ($attr['Status'] ?? 'HK')),
                 'durationInMinutes'     => (int) ($attr['TravelTime'] ?? 0),
-                'distanceInMiles'       => (int) ($attr['Distance'] ?? 0),
+                'distanceInMiles'       => (int) ($attr['Distance']   ?? 0),
                 'travelerIndices'       => range(1, max(1, $travelerCount)),
                 'identityDocuments'     => [],
                 'sellMessages'          => $sellMessages,
-                '_segmentKey'           => (string) ($attr['Key'] ?? ''),
-                '_group'                => (int) ($attr['Group'] ?? 0),
-                '_travelOrder'          => (int) ($attr['TravelOrder'] ?? $index - 9),
+                'isPast'                => false,
+                '_segmentKey'           => (string) ($attr['Key']         ?? ''),
+                '_group'                => (int)    ($attr['Group']        ?? 0),
+                '_travelOrder'          => (int)    ($attr['TravelOrder']  ?? $index - 9),
                 '_marriageGroup'        => (string) ($attr['MarriageGroup'] ?? ''),
                 '_providerCode'         => (string) ($attr['ProviderCode'] ?? '1G'),
-                '_status'               => (string) ($attr['Status'] ?? 'HK'),
+                '_status'               => (string) ($attr['Status']       ?? 'HK'),
                 '_depTimeRaw'           => $depTime,
                 '_arrTimeRaw'           => $arrTime,
                 '_connDuration'         => $connDuration,
@@ -512,17 +722,17 @@ class TravelPortPNRResponseParser
     {
         $meals     = [];
         $mealCodes = [
-            'B' => 'Breakfast', 'L' => 'Lunch', 'D' => 'Dinner',
-            'S' => 'Snack',     'M' => 'Meal',  'V' => 'Vegetarian Meal',
+            'B' => 'Breakfast', 'L' => 'Lunch',   'D' => 'Dinner',
+            'S' => 'Snack',     'M' => 'Meal',     'V' => 'Vegetarian Meal',
             'K' => 'Kosher',    'H' => 'Hindu Meal',
         ];
 
         foreach ($this->safeXpath($xml, '//com:SSR') as $ssr) {
             $attr = $ssr->attributes();
             $type = (string) ($attr['Type'] ?? '');
-            if ($type === 'MEAL' || str_starts_with($type, 'ML') || $type === 'VGML' || $type === 'HNML') {
-                $code        = substr($type, 0, 1);
-                $meals[]     = [
+            if (in_array($type, ['MEAL','VGML','HNML','KSML','VLML']) || str_starts_with($type, 'ML')) {
+                $code    = substr($type, 0, 1);
+                $meals[] = [
                     'code'        => $code,
                     'description' => $mealCodes[$code] ?? $type,
                 ];
@@ -533,14 +743,14 @@ class TravelPortPNRResponseParser
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    //  SEGMENTS
+    //  SEGMENTS (Sabre buildSegments এর মতো)
     // ═══════════════════════════════════════════════════════════════════════
 
     private function buildSegments(array $flights, array $travelers): array
     {
         $segments = [];
 
-        // Build identity documents map from travelers
+        // Identity docs map from travelers
         $allIdentityDocs = [];
         foreach ($travelers as $traveler) {
             foreach ($traveler['identityDocuments'] ?? [] as $doc) {
@@ -552,6 +762,8 @@ class TravelPortPNRResponseParser
         }
 
         foreach ($flights as $idx => $flight) {
+
+            // Connection layover (Sabre buildSegments এর মতো)
             $connection = null;
             if ($flight['_connDuration'] !== null) {
                 $connection = ['duration' => $flight['_connDuration']];
@@ -565,9 +777,9 @@ class TravelPortPNRResponseParser
 
                 if ($currKey === $nextKey) {
                     try {
-                        $arr        = new \DateTime($flight['_arrTimeRaw']);
-                        $dep        = new \DateTime($flights[$idx + 1]['_depTimeRaw']);
-                        $diff       = $arr->diff($dep);
+                        $arr  = new \DateTime($flight['_arrTimeRaw']);
+                        $dep  = new \DateTime($flights[$idx + 1]['_depTimeRaw']);
+                        $diff = $arr->diff($dep);
                         $connection = ['duration' => $diff->h * 60 + $diff->i + $diff->days * 1440];
                     } catch (\Exception) {
                         $connection = ['duration' => 0];
@@ -576,6 +788,7 @@ class TravelPortPNRResponseParser
             }
 
             $segments[] = [
+                // ── Sabre compatible keys ──────────────────────────────────
                 'key'                    => $flight['_segmentKey'],
                 'item_id'                => $flight['itemId'],
                 'group'                  => $flight['_group'],
@@ -602,13 +815,12 @@ class TravelPortPNRResponseParser
                 'status'                 => $flight['flightStatusCode'],
                 'status_name'            => $flight['flightStatusName'],
                 'source_type'            => $flight['sourceType'],
-                // ── FIX: confirmation_id = supplier locator code ──
                 'confirmation_id'        => $flight['confirmationId'],
                 'number_of_seats'        => $flight['numberOfSeats'],
                 'traveler_indices'       => $flight['travelerIndices'],
                 'meals'                  => $flight['meals'],
-                // ── FIX: identity_documents from travelers ──
                 'identity_documents'     => $allIdentityDocs,
+                'is_past'                => $flight['isPast'],
                 'marriage_group'         => $flight['_marriageGroup'],
                 'provider_code'          => $flight['_providerCode'],
                 'travel_order'           => $flight['_travelOrder'],
@@ -625,7 +837,7 @@ class TravelPortPNRResponseParser
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    //  ALL SEGMENTS
+    //  ALL SEGMENTS (Sabre buildAllSegments এর মতো)
     // ═══════════════════════════════════════════════════════════════════════
 
     private function buildAllSegments(array $flights): array
@@ -645,7 +857,7 @@ class TravelPortPNRResponseParser
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    //  JOURNEYS
+    //  JOURNEYS (Sabre buildJourneys এর মতো)
     // ═══════════════════════════════════════════════════════════════════════
 
     private function buildJourneys(array $flights): array
@@ -672,7 +884,7 @@ class TravelPortPNRResponseParser
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    //  PRICING
+    //  PRICING  (Sabre buildPricing এর মতো)
     // ═══════════════════════════════════════════════════════════════════════
 
     private function parsePricing(SimpleXMLElement $xml, array $flights): array
@@ -683,28 +895,51 @@ class TravelPortPNRResponseParser
         }
 
         $firstAttr = $pricingNodes[0]->attributes();
-        $currency  = $this->extractCurrency((string) ($firstAttr['ApproximateTotalPrice'] ?? $firstAttr['TotalPrice'] ?? 'BDT0'));
+        $currency  = $this->extractCurrency(
+            (string) ($firstAttr['ApproximateTotalPrice'] ?? $firstAttr['TotalPrice'] ?? 'BDT0')
+        );
 
-        // Grand total
-        $grandTotal = 0.0;
-        $grandTaxes = 0.0;
-        $grandBase  = 0.0;
+        // ── Grand total: Payment element থেকে (actual paid amount) ─────────
+        $grandTotal  = 0.0;
+        $grandTaxes  = 0.0;
+        $grandBase   = 0.0;
+
+        // First try Payment element (most accurate)
+        $paymentNodes = $this->safeXpath($xml, '//com:Payment');
+        if (!empty($paymentNodes)) {
+            foreach ($paymentNodes as $pn) {
+                $pa          = $pn->attributes();
+                $paidStr     = (string) ($pa['ApproximateAmount'] ?? $pa['Amount'] ?? '');
+                if (!empty($paidStr)) {
+                    $grandTotal += (float) $this->extractAmount($paidStr);
+                    $currency    = $this->extractCurrency($paidStr);
+                }
+            }
+        }
+
+        // Fallback: sum from AirPricingInfo
+        if ($grandTotal == 0) {
+            foreach ($pricingNodes as $pn) {
+                $pna         = $pn->attributes();
+                $grandTotal += (float) $this->extractAmount((string) ($pna['ApproximateTotalPrice'] ?? $pna['TotalPrice'] ?? '0'));
+            }
+        }
+
+        // Taxes & base from AirPricingInfo (Payment element এ নেই)
         foreach ($pricingNodes as $pn) {
-            $pna         = $pn->attributes();
-            $grandTotal += (float) $this->extractAmount((string) ($pna['ApproximateTotalPrice'] ?? $pna['TotalPrice'] ?? '0'));
+            $pna        = $pn->attributes();
             $grandTaxes += (float) $this->extractAmount((string) ($pna['Taxes'] ?? '0'));
             $grandBase  += (float) $this->extractAmount((string) ($pna['ApproximateBasePrice'] ?? '0'));
         }
 
-        // Plating carrier
-        $tmNodes       = $this->safeXpath($xml, '//air:TicketingModifiers');
+        // ── Plating carrier ──────────────────────────────────────────────
+        $tmNodes        = $this->safeXpath($xml, '//air:TicketingModifiers');
         $platingCarrier = '';
         if (!empty($tmNodes)) {
-            $tma            = $tmNodes[0]->attributes();
-            $platingCarrier = (string) ($tma['PlatingCarrier'] ?? '');
+            $platingCarrier = (string) ($tmNodes[0]->attributes()['PlatingCarrier'] ?? '');
         }
 
-        // Fare breakdowns
+        // ── Fare breakdowns (Sabre fareBreakdowns এর মতো) ───────────────
         $fareBreakdowns = [];
         foreach ($pricingNodes as $pn) {
             $pna = $pn->attributes();
@@ -712,9 +947,9 @@ class TravelPortPNRResponseParser
             $ptNodes = $this->safeXpath($pn, './/air:PassengerType');
             $paxType = !empty($ptNodes) ? (string) ($ptNodes[0]->attributes()['Code'] ?? 'ADT') : 'ADT';
 
-            $ptotal   = (string) ($pna['ApproximateTotalPrice'] ?? $pna['TotalPrice'] ?? 'BDT0');
-            $pbase    = (string) ($pna['ApproximateBasePrice'] ?? $pna['EquivalentBasePrice'] ?? $pna['BasePrice'] ?? 'BDT0');
-            $ptaxes   = (string) ($pna['Taxes'] ?? 'BDT0');
+            $ptotal    = (string) ($pna['ApproximateTotalPrice'] ?? $pna['TotalPrice'] ?? 'BDT0');
+            $pbase     = (string) ($pna['ApproximateBasePrice']  ?? $pna['EquivalentBasePrice'] ?? $pna['BasePrice'] ?? 'BDT0');
+            $ptaxes    = (string) ($pna['Taxes'] ?? 'BDT0');
             $pcurrency = $this->extractCurrency($ptotal);
 
             $ptaxBreakdown = [];
@@ -724,75 +959,154 @@ class TravelPortPNRResponseParser
                     'code'     => (string) ($ta['Category'] ?? ''),
                     'amount'   => $this->extractAmount((string) ($ta['Amount'] ?? '0')),
                     'currency' => $this->extractCurrency((string) ($ta['Amount'] ?? '')),
+                    'is_paid'  => false,
                 ];
             }
 
             $pFareConstruction = [];
             foreach ($this->safeXpath($pn, './/air:FareInfo') as $fi) {
-                $fia   = $fi->attributes();
-                $bagKg = 0;
-                $mw2   = $this->safeXpath($fi, './/air:MaxWeight');
-                if (!empty($mw2)) {
-                    $mwa2 = $mw2[0]->attributes();
-                    if (strtolower((string) ($mwa2['Unit'] ?? '')) === 'kilograms') {
-                        $bagKg = (int) ($mwa2['Value'] ?? 0);
+                $fia      = $fi->attributes();
+                $bagKg    = 0;
+                $bagPcs   = null;
+
+                // MaxWeight
+                $mwNodes = $this->safeXpath($fi, './/air:MaxWeight');
+                if (!empty($mwNodes)) {
+                    $mwa = $mwNodes[0]->attributes();
+                    if (strtolower((string) ($mwa['Unit'] ?? '')) === 'kilograms') {
+                        $bagKg = (int) ($mwa['Value'] ?? 0);
                     }
                 }
 
-                $brandFareCode = '';
-                $brandNodes    = $this->safeXpath($fi, './/air:Brand');
+                // NumberOfPieces
+                $npNodes = $this->safeXpath($fi, './/air:NumberOfPieces');
+                if (!empty($npNodes)) {
+                    $bagPcs = (int) ((string) $npNodes[0]);
+                }
+
+                // Brand info
+                $brandId   = '';
+                $brandName = '';
+                $brandNodes = $this->safeXpath($fi, './/air:Brand');
                 if (!empty($brandNodes)) {
-                    $ba            = $brandNodes[0]->attributes();
-                    $brandFareCode = (string) ($ba['BrandID'] ?? '');
+                    $ba        = $brandNodes[0]->attributes();
+                    $brandId   = (string) ($ba['BrandID'] ?? '');
+                    $brandName = (string) ($ba['Name']    ?? '');
+                }
+
+                // Endorsements
+                $endorsements = [];
+                foreach ($this->safeXpath($fi, './/com:Endorsement') as $end) {
+                    $ea = $end->attributes();
+                    $endorsements[] = (string) ($ea['Value'] ?? '');
                 }
 
                 $pFareConstruction[] = [
                     'fare_basis'         => (string) ($fia['FareBasis'] ?? ''),
-                    'brand_fare_code'    => $brandFareCode,
-                    'brand_fare_name'    => '',
+                    'brand_fare_code'    => $brandId,
+                    'brand_fare_name'    => $brandName,
                     'brand_program_code' => '',
                     'brand_program_name' => '',
                     'is_current'         => true,
                     'base_amount'        => $this->extractAmount((string) ($fia['Amount'] ?? '0')),
                     'base_currency'      => $this->extractCurrency((string) ($fia['Amount'] ?? '')),
                     'checked_bag_kg'     => $bagKg,
-                    'checked_bag_pieces' => null,
+                    'checked_bag_pieces' => $bagPcs,
                     'cabin_bag_kg'       => null,
+                    // TravelPort extra
+                    '_endorsements'      => $endorsements,
+                    '_not_valid_before'  => (string) ($fia['NotValidBefore'] ?? ''),
+                    '_not_valid_after'   => (string) ($fia['NotValidAfter']  ?? ''),
+                    '_private_fare'      => (string) ($fia['PrivateFare']    ?? ''),
                 ];
             }
 
+            // FareCalc
             $pFareCalcNodes = $this->safeXpath($pn, './/air:FareCalc');
             $pFareCalc      = !empty($pFareCalcNodes) ? (string) $pFareCalcNodes[0] : '';
 
+            // Commission from TicketingModifiers
+            $commPct    = null;
+            $commAmount = null;
+            if (!empty($tmNodes)) {
+                $commNodes = $this->safeXpath($tmNodes[0], './/com:Commission');
+                if (!empty($commNodes)) {
+                    $ca      = $commNodes[0]->attributes();
+                    $commPct = (string) ($ca['Percentage'] ?? null);
+                    if ($commPct) {
+                        $baseAmt    = (float) $this->extractAmount($pbase);
+                        $commAmount = number_format($baseAmt * (float)$commPct / 100, 2, '.', '');
+                    }
+                }
+            }
+
+            // Ticketed status
+            $isTicketed = (string) ($pna['Ticketed'] ?? 'false') === 'true';
+
+            // Change/Cancel penalties (for fare_rules, also stored here)
+            $changePenalty = null;
+            $cancelPenalty = null;
+            $cpNodes = $this->safeXpath($pn, './/air:ChangePenalty');
+            if (!empty($cpNodes)) {
+                $amtNodes     = $this->safeXpath($cpNodes[0], './/air:Amount');
+                $changePenalty = !empty($amtNodes) ? $this->extractAmount((string) $amtNodes[0]) : '0';
+                $cpCurr        = !empty($amtNodes) ? $this->extractCurrency((string) $amtNodes[0]) : 'BDT';
+            }
+            $ccNodes = $this->safeXpath($pn, './/air:CancelPenalty');
+            if (!empty($ccNodes)) {
+                $amtNodes     = $this->safeXpath($ccNodes[0], './/air:Amount');
+                $cancelPenalty = !empty($amtNodes) ? $this->extractAmount((string) $amtNodes[0]) : '0';
+                $ccCurr        = !empty($amtNodes) ? $this->extractCurrency((string) $amtNodes[0]) : 'BDT';
+            }
+
             $fareBreakdowns[] = [
-                'record_id'           => (string) (count($fareBreakdowns) + 1),
-                'record_type_code'    => 'PQ',
-                'record_type_name'    => 'Price Quote',
-                'pricing_type_code'   => 'S',
-                'pricing_type_name'   => 'System',
-                'pricing_status_code' => 'A',
-                'pricing_status_name' => 'Active',
-                'traveler_indices'    => [],
-                'traveler_type'       => $paxType,
-                'priced_traveler_type'=> $paxType,
-                'is_negotiated'       => false,
-                'validating_carrier'  => $platingCarrier,
-                'fare_calculation'    => $pFareCalc,
-                'subtotal'            => $this->extractAmount($pbase),
-                'taxes'               => $this->extractAmount($ptaxes),
-                'total'               => $this->extractAmount($ptotal),
-                'currency'            => $pcurrency,
-                'original_total'      => $this->extractAmount($ptotal),
-                'original_currency'   => $pcurrency,
-                'tax_breakdown'       => $ptaxBreakdown,
-                'fare_construction'   => $pFareConstruction,
-                'creation_details'    => [],
+                // ── Sabre compatible ──────────────────────────────────────
+                'record_id'            => (string) (count($fareBreakdowns) + 1),
+                'record_type_code'     => 'PQ',
+                'record_type_name'     => 'Price Quote',
+                'pricing_type_code'    => 'S',
+                'pricing_type_name'    => 'System',
+                'pricing_status_code'  => $isTicketed ? 'T' : 'A',
+                'pricing_status_name'  => $isTicketed ? 'Ticketed' : 'Active',
+                'traveler_indices'     => [],
+                'traveler_type'        => $paxType,
+                'priced_traveler_type' => $paxType,
+                'is_negotiated'        => false,
+                'validating_carrier'   => $platingCarrier,
+                'fare_calculation'     => $pFareCalc,
+                'subtotal'             => $this->extractAmount($pbase),
+                'taxes'                => $this->extractAmount($ptaxes),
+                'total'                => $this->extractAmount($ptotal),
+                'currency'             => $pcurrency,
+                'original_total'       => $this->extractAmount($ptotal),
+                'original_currency'    => $pcurrency,
+                'tax_breakdown'        => $ptaxBreakdown,
+                'fare_construction'    => $pFareConstruction,
+                'commission' => [
+                    'percentage' => $commPct,
+                    'amount'     => $commAmount,
+                ],
+                'creation_details' => [],
+
+                // ── TravelPort extra ──────────────────────────────────────
+                '_tp_extra' => [
+                    'pricing_method'        => (string) ($pna['PricingMethod']  ?? ''),
+                    'refundable'            => (string) ($pna['Refundable']     ?? 'false') === 'true',
+                    'exchangeable'          => (string) ($pna['Exchangeable']   ?? 'false') === 'true',
+                    'latest_ticketing_time' => (string) ($pna['LatestTicketingTime'] ?? ''),
+                    'true_last_date_to_ticket' => (string) ($pna['TrueLastDateToTicket'] ?? ''),
+                    'change_penalty'        => $changePenalty,
+                    'change_penalty_currency' => $cpCurr ?? null,
+                    'cancel_penalty'        => $cancelPenalty,
+                    'cancel_penalty_currency' => $ccCurr ?? null,
+                ],
             ];
         }
 
-        // Baggage
-        $checkedBagKg   = 0;
-        $fareInfoNodes  = $this->safeXpath($pricingNodes[0], './/air:FareInfo');
+        // ── Baggage: first FareInfo থেকে ────────────────────────────────
+        $checkedBagKg  = 0;
+        $checkedBagPcs = null;
+        $fareInfoNodes = $this->safeXpath($pricingNodes[0], './/air:FareInfo');
         if (!empty($fareInfoNodes)) {
             $mw = $this->safeXpath($fareInfoNodes[0], './/air:MaxWeight');
             if (!empty($mw)) {
@@ -801,11 +1115,15 @@ class TravelPortPNRResponseParser
                     $checkedBagKg = (int) ($mwa['Value'] ?? 0);
                 }
             }
+            $np = $this->safeXpath($fareInfoNodes[0], './/air:NumberOfPieces');
+            if (!empty($np)) {
+                $checkedBagPcs = (int) ((string) $np[0]);
+            }
         }
 
-        $perLegBaggage  = $this->buildPerLegBaggage($flights, $checkedBagKg);
+        $perLegBaggage    = $this->buildPerLegBaggage($flights, $checkedBagKg, $checkedBagPcs);
         $fareOfferFlights = array_map(fn($f) => $f['itemId'], $flights);
-        $travelerCount  = count($this->safeXpath($xml, '//com:BookingTraveler'));
+        $travelerCount    = count($this->safeXpath($xml, '//com:BookingTraveler'));
 
         return [
             'grand_total' => [
@@ -814,40 +1132,50 @@ class TravelPortPNRResponseParser
                 'total'    => (string) (int) $grandTotal,
                 'currency' => $currency,
             ],
-            'fare_breakdowns'          => $fareBreakdowns,
-            'per_leg_baggage'          => $perLegBaggage,
-            'checked_bag_kg'           => $checkedBagKg,
-            'cabin_bag_kg'             => 7,
-            'checked_baggage_charges'  => [],
-            'traveler_indices'         => range(1, max(1, $travelerCount)),
-            'fare_offer_flights'       => $fareOfferFlights,
+            'fare_breakdowns'         => $fareBreakdowns,
+            'per_leg_baggage'         => $perLegBaggage,
+            'checked_bag_kg'          => $checkedBagKg,
+            'cabin_bag_kg'            => 7,
+            'checked_baggage_charges' => [],
+            'traveler_indices'        => range(1, max(1, $travelerCount)),
+            'fare_offer_flights'      => $fareOfferFlights,
         ];
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    //  PER LEG BAGGAGE
+    //  PER LEG BAGGAGE (Sabre buildPricing perLegBaggage এর মতো)
     // ═══════════════════════════════════════════════════════════════════════
 
-    private function buildPerLegBaggage(array $flights, int $checkedBagKg): array
+    private function buildPerLegBaggage(array $flights, int $checkedBagKg, ?int $checkedBagPcs): array
     {
         if (empty($flights)) return [];
 
-        $allItemIds     = array_map(fn($f) => $f['itemId'], $flights);
-        $travelerIndices = $flights[0]['travelerIndices'] ?? [1];
+        // Group by journey (group field)
+        $groups = [];
+        foreach ($flights as $f) {
+            $gk = (string) $f['_group'];
+            $groups[$gk][] = $f;
+        }
 
-        return [[
-            'leg_index'          => 0,
-            'traveler_indices'   => $travelerIndices,
-            'flight_item_ids'    => $allItemIds,
-            'checked_bag_kg'     => $checkedBagKg,
-            'checked_bag_pieces' => null,
-            'cabin_bag_kg'       => 7,
-            'cabin_bag_pieces'   => null,
-        ]];
+        $legs = [];
+        foreach (array_values($groups) as $legIdx => $group) {
+            $legs[] = [
+                'leg_index'          => $legIdx,
+                'traveler_indices'   => $group[0]['travelerIndices'] ?? [1],
+                'flight_item_ids'    => array_map(fn($f) => $f['itemId'], $group),
+                'checked_bag_kg'     => $checkedBagKg,
+                'checked_bag_pieces' => $checkedBagPcs,
+                'cabin_bag_kg'       => 7,
+                'cabin_bag_pieces'   => null,
+                'extra_charges'      => [],
+            ];
+        }
+
+        return $legs;
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    //  FARE RULES
+    //  FARE RULES (Sabre buildFareRules এর মতো)
     // ═══════════════════════════════════════════════════════════════════════
 
     private function buildFareRules(SimpleXMLElement $xml): array
@@ -856,19 +1184,14 @@ class TravelPortPNRResponseParser
         if (empty($pricingNodes)) return [];
 
         $tmNodes = $this->safeXpath($xml, '//air:TicketingModifiers');
-        $airline = '';
-        if (!empty($tmNodes)) {
-            $tma     = $tmNodes[0]->attributes();
-            $airline = (string) ($tma['PlatingCarrier'] ?? '');
-        }
+        $airline = !empty($tmNodes) ? (string) ($tmNodes[0]->attributes()['PlatingCarrier'] ?? '') : '';
 
-        // Origin/Destination from FareInfo
         $fareInfoNodes = $this->safeXpath($pricingNodes[0], './/air:FareInfo');
         $ruleOrigin    = '';
         $ruleDest      = '';
         if (!empty($fareInfoNodes)) {
-            $fia       = $fareInfoNodes[0]->attributes();
-            $ruleOrigin = (string) ($fia['Origin'] ?? '');
+            $fia        = $fareInfoNodes[0]->attributes();
+            $ruleOrigin = (string) ($fia['Origin']      ?? '');
             $ruleDest   = (string) ($fia['Destination'] ?? '');
         }
 
@@ -876,23 +1199,23 @@ class TravelPortPNRResponseParser
         foreach ($pricingNodes as $p) {
             $attr = $p->attributes();
 
-            $isRefundable   = (string) ($attr['Refundable'] ?? 'false') === 'true';
+            $isRefundable   = (string) ($attr['Refundable']   ?? 'false') === 'true';
             $isExchangeable = (string) ($attr['Exchangeable'] ?? 'false') === 'true';
 
             $ptNodes = $this->safeXpath($p, './/air:PassengerType');
             $paxType = !empty($ptNodes) ? (string) ($ptNodes[0]->attributes()['Code'] ?? 'ADT') : 'ADT';
 
-            $refundPenalties   = [];
-            $exchangePenalties = [];
+            // Refund (cancel) penalties
+            $refundPenalties = [];
+            foreach ($this->safeXpath($p, './/air:CancelPenalty') as $cp) {
+                $cpa      = $cp->attributes();
+                $applic   = (string) ($cpa['PenaltyApplies'] ?? 'Before Departure');
+                $amtNodes = $this->safeXpath($cp, './/air:Amount');
+                $amount   = !empty($amtNodes) ? $this->extractAmount((string) $amtNodes[0]) : '0';
+                $curr     = !empty($amtNodes) ? $this->extractCurrency((string) $amtNodes[0]) : 'BDT';
 
-            $cancelPenalty = $this->safeXpath($p, './/air:CancelPenalty');
-            if (!empty($cancelPenalty)) {
-                $cpa         = $cancelPenalty[0]->attributes();
-                $amountNodes = $this->safeXpath($cancelPenalty[0], './/air:Amount');
-                $amount      = !empty($amountNodes) ? $this->extractAmount((string) $amountNodes[0]) : '0';
-                $curr        = !empty($amountNodes) ? $this->extractCurrency((string) $amountNodes[0]) : 'BDT';
                 $refundPenalties[] = [
-                    'applicability'    => 'BEFORE_DEPARTURE',
+                    'applicability'    => strtoupper(str_replace(' ', '_', $applic)),
                     'conditions_apply' => false,
                     'has_no_show_cost' => false,
                     'penalty_amount'   => $this->cleanAmount($amount),
@@ -902,14 +1225,17 @@ class TravelPortPNRResponseParser
                 ];
             }
 
-            $changePenalty = $this->safeXpath($p, './/air:ChangePenalty');
-            if (!empty($changePenalty)) {
-                $cpa         = $changePenalty[0]->attributes();
-                $amountNodes = $this->safeXpath($changePenalty[0], './/air:Amount');
-                $amount      = !empty($amountNodes) ? $this->extractAmount((string) $amountNodes[0]) : '0';
-                $curr        = !empty($amountNodes) ? $this->extractCurrency((string) $amountNodes[0]) : 'BDT';
+            // Exchange (change) penalties
+            $exchangePenalties = [];
+            foreach ($this->safeXpath($p, './/air:ChangePenalty') as $cp) {
+                $cpa      = $cp->attributes();
+                $applic   = (string) ($cpa['PenaltyApplies'] ?? 'Anytime');
+                $amtNodes = $this->safeXpath($cp, './/air:Amount');
+                $amount   = !empty($amtNodes) ? $this->extractAmount((string) $amtNodes[0]) : '0';
+                $curr     = !empty($amtNodes) ? $this->extractCurrency((string) $amtNodes[0]) : 'BDT';
+
                 $exchangePenalties[] = [
-                    'applicability'    => 'BEFORE_DEPARTURE',
+                    'applicability'    => strtoupper(str_replace(' ', '_', $applic)),
                     'conditions_apply' => false,
                     'has_no_show_cost' => false,
                     'penalty_amount'   => $this->cleanAmount($amount),
@@ -926,6 +1252,7 @@ class TravelPortPNRResponseParser
                 'passenger_code'     => $paxType,
                 'is_refundable'      => $isRefundable,
                 'is_changeable'      => $isExchangeable,
+                'is_cancelable'      => $isRefundable,
                 'refund_penalties'   => $refundPenalties,
                 'exchange_penalties' => $exchangePenalties,
             ];
@@ -935,85 +1262,53 @@ class TravelPortPNRResponseParser
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    //  ACTION STATUS
+    //  ACTION STATUS (Sabre buildActionStatus এর মতো — multi-priority)
     // ═══════════════════════════════════════════════════════════════════════
 
     private function parseActionStatus(SimpleXMLElement $ur, SimpleXMLElement $xml, array $remarks): array
     {
-        $nodes = $this->safeXpath($ur, './/com:ActionStatus');
-
         $ticketDate = '';
 
-        // ── Priority 1: ActionStatus.TicketDate ──────────────────────
-        if (!empty($nodes)) {
-            $attr       = $nodes[0]->attributes();
-            $ticketDate = (string) ($attr['TicketDate'] ?? '');
-        }
-
-        // ── Priority 2: ADTK Remark (overrides ActionStatus) ─────────
+        // ── Priority 1: ADTK Remark থেকে parse ───────────────────────────
         foreach ($remarks as $remark) {
-            $text = strtoupper($remark['text']);
+            $text = strtoupper($remark['text'] ?? '');
             if (!str_contains($text, 'ADTK')) continue;
 
-            $months = [
-                'JAN'=>'01','FEB'=>'02','MAR'=>'03','APR'=>'04',
-                'MAY'=>'05','JUN'=>'06','JUL'=>'07','AUG'=>'08',
-                'SEP'=>'09','OCT'=>'10','NOV'=>'11','DEC'=>'12',
-            ];
-
-            // Pattern C: BY 24APR26 1204DAC
-            if (preg_match('/BY\s+(\d{1,2})(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)(\d{2,4})\s+(\d{4})[A-Z]{3}/i', $text, $m)) {
-                $day        = str_pad($m[1], 2, '0', STR_PAD_LEFT);
-                $monthNum   = $months[strtoupper($m[2])] ?? '01';
-                $year       = strlen($m[3]) === 2 ? '20'.$m[3] : $m[3];
-                $hour       = substr($m[4], 0, 2);
-                $min        = substr($m[4], 2, 2);
-                $ticketDate = "{$year}-{$monthNum}-{$day}T{$hour}:{$min}:00.000+06:00";
-                break;
-            }
-
-            // Pattern A: GBYDAC22APR26/1101
-            if (preg_match('/[A-Z]{3}(\d{1,2})(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)(\d{2,4})\/(\d{4})/i', $text, $m)) {
-                $day        = str_pad($m[1], 2, '0', STR_PAD_LEFT);
-                $monthNum   = $months[strtoupper($m[2])] ?? '01';
-                $year       = strlen($m[3]) === 2 ? '20'.$m[3] : $m[3];
-                $hour       = substr($m[4], 0, 2);
-                $min        = substr($m[4], 2, 2);
-                $ticketDate = "{$year}-{$monthNum}-{$day}T{$hour}:{$min}:00.000+06:00";
-                break;
-            }
-
-            // Pattern B: BY 22APR 1101 (no year)
-            if (preg_match('/BY\s+(\d{1,2})(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\s+(\d{4})/i', $text, $m)) {
-                $day        = str_pad($m[1], 2, '0', STR_PAD_LEFT);
-                $monthNum   = $months[strtoupper($m[2])] ?? '01';
-                $hour       = substr($m[3], 0, 2);
-                $min        = substr($m[3], 2, 2);
-                $year       = now()->year;
-                $ticketDate = "{$year}-{$monthNum}-{$day}T{$hour}:{$min}:00.000+06:00";
+            $parsed = $this->parseDateFromRemark($text);
+            if ($parsed !== null) {
+                $ticketDate = $parsed;
                 break;
             }
         }
 
-        // ── Priority 3: AirPricingInfo.LatestTicketingTime ───────────
+        // ── Priority 2: ActionStatus.TicketDate ───────────────────────────
+        if (empty($ticketDate)) {
+            $nodes = $this->safeXpath($ur, './/com:ActionStatus');
+            if (!empty($nodes)) {
+                $attr       = $nodes[0]->attributes();
+                $ticketDate = (string) ($attr['TicketDate'] ?? '');
+            }
+        }
+
+        // ── Priority 3: AirPricingInfo.LatestTicketingTime ────────────────
         if (empty($ticketDate)) {
             $pricingNodes = $this->safeXpath($xml, '//air:AirPricingInfo');
             if (!empty($pricingNodes)) {
-                $pna = $pricingNodes[0]->attributes();
-                $ticketDate = (string) ($pna['LatestTicketingTime']
-                    ?? $pna['TrueLastDateToTicket']
-                    ?? '');
+                $pna        = $pricingNodes[0]->attributes();
+                $ticketDate = (string) ($pna['LatestTicketingTime']    ?? $pna['TrueLastDateToTicket'] ?? '');
             }
         }
 
+        // Key, type, provider from ActionStatus node
         $key          = '';
         $type         = 'TAU';
         $providerCode = '1G';
 
+        $nodes = $this->safeXpath($ur, './/com:ActionStatus');
         if (!empty($nodes)) {
             $attr         = $nodes[0]->attributes();
-            $key          = (string) ($attr['Key'] ?? '');
-            $type         = (string) ($attr['Type'] ?? 'TAU');
+            $key          = (string) ($attr['Key']          ?? '');
+            $type         = (string) ($attr['Type']         ?? 'TAU');
             $providerCode = (string) ($attr['ProviderCode'] ?? '1G');
         }
 
@@ -1024,6 +1319,61 @@ class TravelPortPNRResponseParser
             'provider_code' => $providerCode,
         ];
     }
+
+    /**
+     * ADTK remark থেকে ticketing deadline parse — Sabre parseDateFromMessage এর মতো
+     */
+    private function parseDateFromRemark(string $text): ?string
+    {
+        $text = strtoupper(trim($text));
+
+        $months = [
+            'JAN'=>'01','FEB'=>'02','MAR'=>'03','APR'=>'04',
+            'MAY'=>'05','JUN'=>'06','JUL'=>'07','AUG'=>'08',
+            'SEP'=>'09','OCT'=>'10','NOV'=>'11','DEC'=>'12',
+        ];
+
+        // Pattern A: BY 18MAY 2222 DAC  (or similar)
+        if (preg_match('/BY\s+(\d{1,2})(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)(\d{2,4})?\s+(\d{4})[A-Z]{3}/i', $text, $m)) {
+            $day   = str_pad($m[1], 2, '0', STR_PAD_LEFT);
+            $mon   = $months[strtoupper($m[2])] ?? '01';
+            $year  = !empty($m[3]) ? (strlen($m[3]) === 2 ? '20'.$m[3] : $m[3]) : now()->year;
+            $hour  = substr($m[4], 0, 2);
+            $min   = substr($m[4], 2, 2);
+            return "{$year}-{$mon}-{$day}T{$hour}:{$min}:00.000+06:00";
+        }
+
+        // Pattern B: GBYDAC22APR26/1101 or DAC22APR26/1101
+        if (preg_match('/[A-Z]{3}(\d{1,2})(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)(\d{2,4})\/(\d{4})/i', $text, $m)) {
+            $day  = str_pad($m[1], 2, '0', STR_PAD_LEFT);
+            $mon  = $months[strtoupper($m[2])] ?? '01';
+            $year = strlen($m[3]) === 2 ? '20'.$m[3] : $m[3];
+            $hour = substr($m[4], 0, 2);
+            $min  = substr($m[4], 2, 2);
+            return "{$year}-{$mon}-{$day}T{$hour}:{$min}:00.000+06:00";
+        }
+
+        // Pattern C: 18MAY26 2222
+        if (preg_match('/(\d{1,2})(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)(\d{2,4})\s+(\d{4})/i', $text, $m)) {
+            $day  = str_pad($m[1], 2, '0', STR_PAD_LEFT);
+            $mon  = $months[strtoupper($m[2])] ?? '01';
+            $year = strlen($m[3]) === 2 ? '20'.$m[3] : $m[3];
+            $hour = substr($m[4], 0, 2);
+            $min  = substr($m[4], 2, 2);
+            return "{$year}-{$mon}-{$day}T{$hour}:{$min}:00.000+06:00";
+        }
+
+        // Pattern D: date only 18MAY26
+        if (preg_match('/(\d{1,2})(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)(\d{2,4})/i', $text, $m)) {
+            $day  = str_pad($m[1], 2, '0', STR_PAD_LEFT);
+            $mon  = $months[strtoupper($m[2])] ?? '01';
+            $year = strlen($m[3]) === 2 ? '20'.$m[3] : $m[3];
+            return "{$year}-{$mon}-{$day}T23:59:00.000+06:00";
+        }
+
+        return null;
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     //  AGENCY INFO
     // ═══════════════════════════════════════════════════════════════════════
@@ -1031,18 +1381,20 @@ class TravelPortPNRResponseParser
     private function parseAgencyInfo(SimpleXMLElement $ur): array
     {
         $nodes = $this->safeXpath($ur, './/com:AgencyInfo/com:AgentAction');
-        if (empty($nodes)) return [
-            'action_type' => '', 'agent_code' => '',
-            'branch_code' => '', 'agency_code' => '', 'event_time' => '',
-        ];
+        if (empty($nodes)) {
+            return [
+                'action_type' => '', 'agent_code' => '',
+                'branch_code' => '', 'agency_code' => '', 'event_time' => '',
+            ];
+        }
 
         $attr = $nodes[0]->attributes();
         return [
             'action_type' => (string) ($attr['ActionType'] ?? ''),
-            'agent_code'  => (string) ($attr['AgentCode'] ?? ''),
+            'agent_code'  => (string) ($attr['AgentCode']  ?? ''),
             'branch_code' => (string) ($attr['BranchCode'] ?? ''),
             'agency_code' => (string) ($attr['AgencyCode'] ?? ''),
-            'event_time'  => (string) ($attr['EventTime'] ?? ''),
+            'event_time'  => (string) ($attr['EventTime']  ?? ''),
         ];
     }
 
@@ -1057,8 +1409,11 @@ class TravelPortPNRResponseParser
             $attr      = $r->attributes();
             $dataNodes = $this->safeXpath($r, './/com:RemarkData');
             $remarks[] = [
-                'type' => (string) ($attr['TypeInGds'] ?? ''),
-                'text' => !empty($dataNodes) ? (string) $dataNodes[0] : '',
+                'type'      => (string) ($attr['TypeInGds'] ?? ''),
+                'text'      => !empty($dataNodes) ? (string) $dataNodes[0] : '',
+                // TravelPort extra
+                '_category' => (string) ($attr['Category']     ?? ''),
+                '_supplier' => (string) ($attr['SupplierCode'] ?? ''),
             ];
         }
         return $remarks;
@@ -1076,8 +1431,27 @@ class TravelPortPNRResponseParser
         return $warnings;
     }
 
+    private function parseOSI(SimpleXMLElement $ur): array
+    {
+        $osi = [];
+        foreach ($this->safeXpath($ur, './/com:OSI') as $o) {
+            $attr  = $o->attributes();
+            $osi[] = [
+                'carrier' => (string) ($attr['Carrier'] ?? ''),
+                'text'    => (string) ($attr['Text']    ?? ''),
+            ];
+        }
+        return $osi;
+    }
+
+    private function parseActionStatusRemark(SimpleXMLElement $ur): string
+    {
+        $nodes = $this->safeXpath($ur, './/com:ActionStatus/com:Remark');
+        return !empty($nodes) ? (string) $nodes[0] : '';
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
-    //  CONTACT INFO + SPECIAL SERVICES
+    //  CONTACT INFO + SPECIAL SERVICES (Sabre buildSpecialServices এর মতো)
     // ═══════════════════════════════════════════════════════════════════════
 
     private function buildContactInfo(array $travelers): array
@@ -1087,14 +1461,10 @@ class TravelPortPNRResponseParser
         foreach ($travelers as $t) {
             foreach ($t['phones'] as $p) {
                 $entry = $p['number'] . '-' . $p['label'] . '-1.1';
-                if (!in_array($entry, $phones)) {
-                    $phones[] = $entry;
-                }
+                if (!in_array($entry, $phones)) $phones[] = $entry;
             }
             foreach ($t['emails'] as $e) {
-                if (!in_array($e, $emails)) {
-                    $emails[] = $e;
-                }
+                if (!in_array($e, $emails)) $emails[] = $e;
             }
         }
         return ['phones' => $phones, 'emails' => $emails];
@@ -1108,53 +1478,53 @@ class TravelPortPNRResponseParser
 
             foreach ($traveler['emails'] as $email) {
                 $services[] = [
-                    'code'            => 'CTCE',
-                    'name'            => 'Passenger contact information e-mail address',
-                    'message'         => '/' . $email,
-                    'status_code'     => 'HK',
-                    'status_name'     => 'Confirmed',
-                    'traveler_indices'=> [$travelerIndex],
+                    'code'             => 'CTCE',
+                    'name'             => 'Passenger contact information e-mail address',
+                    'message'          => '/' . $email,
+                    'status_code'      => 'HK',
+                    'status_name'      => 'Confirmed',
+                    'traveler_indices' => [$travelerIndex],
                 ];
             }
 
             foreach ($traveler['phones'] as $phone) {
                 $services[] = [
-                    'code'            => 'CTCM',
-                    'name'            => 'Passenger contact information mobile phone number',
-                    'message'         => '/' . $phone['number'],
-                    'status_code'     => 'HK',
-                    'status_name'     => 'Confirmed',
-                    'traveler_indices'=> [$travelerIndex],
+                    'code'             => 'CTCM',
+                    'name'             => 'Passenger contact information mobile phone number',
+                    'message'          => '/' . $phone['number'],
+                    'status_code'      => 'HK',
+                    'status_name'      => 'Confirmed',
+                    'traveler_indices' => [$travelerIndex],
                 ];
             }
 
             foreach ($traveler['identityDocuments'] as $doc) {
-                if (($doc['documentType'] ?? '') === 'PASSPORT') {
-                    $services[] = [
-                        'code'            => 'DOCS',
-                        'name'            => 'API-Passenger Travel Document',
-                        'message'         => sprintf('/P/%s/%s/%s/%s/%s/%s/%s/%s',
-                            $doc['issuingCountryCode'] ?? '',
-                            $doc['documentNumber'] ?? '',
-                            $doc['residenceCountryCode'] ?? '',
-                            $this->formatDocDate($doc['birthDate'] ?? ''),
-                            $this->shortGender($doc['gender'] ?? ''),
-                            $this->formatDocDate($doc['expiryDate'] ?? ''),
-                            $doc['surname'] ?? '',
-                            $doc['givenName'] ?? ''
-                        ),
-                        'status_code'     => 'HK',
-                        'status_name'     => 'Confirmed',
-                        'traveler_indices'=> [$travelerIndex],
-                    ];
-                }
+                if (($doc['documentType'] ?? '') !== 'PASSPORT') continue;
+
+                $services[] = [
+                    'code'             => 'DOCS',
+                    'name'             => 'API-Passenger Travel Document',
+                    'message'          => sprintf('/P/%s/%s/%s/%s/%s/%s/%s/%s',
+                        $doc['issuingCountryCode']  ?? '',
+                        $doc['documentNumber']      ?? '',
+                        $doc['residenceCountryCode'] ?? '',
+                        $this->formatDocDate($doc['birthDate']   ?? ''),
+                        $this->shortGender($doc['gender'] ?? ''),
+                        $this->formatDocDate($doc['expiryDate']  ?? ''),
+                        $doc['surname']    ?? '',
+                        $doc['givenName']  ?? ''
+                    ),
+                    'status_code'      => 'HK',
+                    'status_name'      => 'Confirmed',
+                    'traveler_indices' => [$travelerIndex],
+                ];
             }
         }
         return $services;
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    //  IDENTITY DOCUMENTS (from SSR DOCS)
+    //  IDENTITY DOCUMENTS (SSR DOCS থেকে parse)
     // ═══════════════════════════════════════════════════════════════════════
 
     private function parseIdentityDocuments(array $ssrs, array $name, $travelerAttr): array
@@ -1166,25 +1536,22 @@ class TravelPortPNRResponseParser
             $freeText = ltrim($ssr['free_text'], ' ');
             $parts    = explode('/', $freeText);
 
-            // DOCS format: P/CountryIssue/DocNum/CountryResidence/DOB/Gender/Expiry/Surname/GivenName
             if (count($parts) < 8) continue;
-
-            // Skip DB (Date of Birth only) type SSR
             if (trim($parts[0] ?? '') === 'DB') continue;
 
             $docs[] = [
-                'documentNumber'        => $parts[2] ?? '',
-                'documentType'          => 'PASSPORT',
-                'passportType'          => 'Passport',
-                'expiryDate'            => $this->parseDocDate($parts[6] ?? ''),
-                'issuingCountryCode'    => $parts[1] ?? '',
-                'residenceCountryCode'  => $parts[3] ?? '',
-                'givenName'             => trim($parts[8] ?? $name['first']),
-                'surname'               => trim($parts[7] ?? $name['last']),
-                'birthDate'             => isset($travelerAttr['DOB']) ? (string) $travelerAttr['DOB'] : '',
-                'gender'                => $this->mapGender((string) ($travelerAttr['Gender'] ?? '')),
-                'isPrimaryDocumentHolder' => false,
-                'itemId'                => md5($ssr['free_text']),
+                'documentNumber'           => $parts[2] ?? '',
+                'documentType'             => 'PASSPORT',
+                'passportType'             => 'Passport',
+                'expiryDate'               => $this->parseDocDate($parts[6] ?? ''),
+                'issuingCountryCode'       => $parts[1] ?? '',
+                'residenceCountryCode'     => $parts[3] ?? '',
+                'givenName'                => trim($parts[8] ?? $name['first']),
+                'surname'                  => trim($parts[7] ?? $name['last']),
+                'birthDate'                => isset($travelerAttr['DOB']) ? (string) $travelerAttr['DOB'] : '',
+                'gender'                   => $this->mapGender((string) ($travelerAttr['Gender'] ?? '')),
+                'isPrimaryDocumentHolder'  => false,
+                'itemId'                   => md5($ssr['free_text']),
             ];
 
             $docs[] = [
@@ -1218,9 +1585,9 @@ class TravelPortPNRResponseParser
         $attr = $nodes[0]->attributes();
         return [
             'prefix' => (string) ($attr['Prefix'] ?? ''),
-            'first'  => (string) ($attr['First'] ?? ''),
+            'first'  => (string) ($attr['First']  ?? ''),
             'middle' => (string) ($attr['Middle'] ?? ''),
-            'last'   => (string) ($attr['Last'] ?? ''),
+            'last'   => (string) ($attr['Last']   ?? ''),
         ];
     }
 
@@ -1230,8 +1597,10 @@ class TravelPortPNRResponseParser
         foreach ($this->safeXpath($element, './/com:PhoneNumber') as $p) {
             $attr     = $p->attributes();
             $phones[] = [
-                'type'   => (string) ($attr['Type'] ?? ''),
-                'number' => (string) ($attr['Number'] ?? ''),
+                'type'         => (string) ($attr['Type']        ?? ''),
+                'number'       => (string) ($attr['Number']      ?? ''),
+                'country_code' => (string) ($attr['CountryCode'] ?? ''),
+                'location'     => (string) ($attr['Location']    ?? ''),
             ];
         }
         return $phones;
@@ -1243,7 +1612,7 @@ class TravelPortPNRResponseParser
         foreach ($this->safeXpath($element, './/com:Email') as $e) {
             $attr     = $e->attributes();
             $emails[] = [
-                'type'  => (string) ($attr['Type'] ?? ''),
+                'type'  => (string) ($attr['Type']    ?? ''),
                 'email' => (string) ($attr['EmailID'] ?? ''),
             ];
         }
@@ -1256,10 +1625,11 @@ class TravelPortPNRResponseParser
         foreach ($this->safeXpath($traveler, './/com:SSR') as $s) {
             $attr   = $s->attributes();
             $ssrs[] = [
-                'type'      => (string) ($attr['Type'] ?? ''),
-                'status'    => (string) ($attr['Status'] ?? ''),
-                'free_text' => (string) ($attr['FreeText'] ?? ''),
-                'carrier'   => (string) ($attr['Carrier'] ?? ''),
+                'type'        => (string) ($attr['Type']      ?? ''),
+                'status'      => (string) ($attr['Status']    ?? ''),
+                'free_text'   => (string) ($attr['FreeText']  ?? ''),
+                'carrier'     => (string) ($attr['Carrier']   ?? ''),
+                'segment_ref' => (string) ($attr['SegmentRef'] ?? ''),
             ];
         }
         return $ssrs;
@@ -1275,7 +1645,7 @@ class TravelPortPNRResponseParser
         return [
             'success'      => false,
             'soap_fault'   => true,
-            'fault_code'   => (string) ($fault->faultcode ?? ''),
+            'fault_code'   => (string) ($fault->faultcode   ?? ''),
             'fault_string' => trim((string) ($fault->faultstring ?? '')),
         ];
     }
@@ -1287,7 +1657,7 @@ class TravelPortPNRResponseParser
         $xml = preg_replace('/[◀▶]/u', '', $xml);
         $xml = str_replace(
             ["\u{201C}", "\u{201D}", "\u{2018}", "\u{2019}"],
-            ['"', '"', "'", "'"],
+            ['"',        '"',        "'",         "'"],
             $xml
         );
         $xml = trim($xml, '"\'');
@@ -1318,11 +1688,9 @@ class TravelPortPNRResponseParser
         return strlen($datetime) >= 10 ? substr($datetime, 0, 10) : '';
     }
 
-    private function extractTime(string $datetime, bool $withSeconds = true): string
+    private function extractTime(string $datetime): string
     {
-        if (strlen($datetime) < 19) return '';
-        $time = substr($datetime, 11, 8);
-        return $withSeconds ? $time : substr($time, 0, 5);
+        return strlen($datetime) >= 19 ? substr($datetime, 11, 8) : '';
     }
 
     private function extractAmount(string $value): string
@@ -1332,7 +1700,7 @@ class TravelPortPNRResponseParser
 
     private function cleanAmount(string $value): string
     {
-        if (strpos($value, '.') !== false) {
+        if (str_contains($value, '.')) {
             $value = rtrim(rtrim($value, '0'), '.');
         }
         return $value;
@@ -1348,23 +1716,23 @@ class TravelPortPNRResponseParser
     {
         if (strlen($date) !== 7) return '';
         $months = [
-            'JAN' => '01', 'FEB' => '02', 'MAR' => '03', 'APR' => '04',
-            'MAY' => '05', 'JUN' => '06', 'JUL' => '07', 'AUG' => '08',
-            'SEP' => '09', 'OCT' => '10', 'NOV' => '11', 'DEC' => '12',
+            'JAN'=>'01','FEB'=>'02','MAR'=>'03','APR'=>'04',
+            'MAY'=>'05','JUN'=>'06','JUL'=>'07','AUG'=>'08',
+            'SEP'=>'09','OCT'=>'10','NOV'=>'11','DEC'=>'12',
         ];
         $day   = substr($date, 0, 2);
         $month = $months[strtoupper(substr($date, 2, 3))] ?? '01';
         $year  = '20' . substr($date, 5, 2);
-        return "$year-$month-$day";
+        return "{$year}-{$month}-{$day}";
     }
 
     private function formatDocDate(string $date): string
     {
         if (empty($date)) return '';
         $months = [
-            '01' => 'JAN', '02' => 'FEB', '03' => 'MAR', '04' => 'APR',
-            '05' => 'MAY', '06' => 'JUN', '07' => 'JUL', '08' => 'AUG',
-            '09' => 'SEP', '10' => 'OCT', '11' => 'NOV', '12' => 'DEC',
+            '01'=>'JAN','02'=>'FEB','03'=>'MAR','04'=>'APR',
+            '05'=>'MAY','06'=>'JUN','07'=>'JUL','08'=>'AUG',
+            '09'=>'SEP','10'=>'OCT','11'=>'NOV','12'=>'DEC',
         ];
         $parts = explode('-', $date);
         if (count($parts) !== 3) return '';
@@ -1412,7 +1780,7 @@ class TravelPortPNRResponseParser
     private function shortGender(string $g): string
     {
         return match (strtoupper($g)) {
-            'MALE', 'M'   => 'M',
+            'MALE',   'M' => 'M',
             'FEMALE', 'F' => 'F',
             default       => $g,
         };
@@ -1423,6 +1791,8 @@ class TravelPortPNRResponseParser
         return match ($s) {
             'HK', 'KK' => 'Confirmed',
             'NN'       => 'Need',
+            'UC'       => 'Unable to Confirm',
+            'HX'       => 'Cancelled',
             default    => 'Confirmed',
         };
     }
@@ -1430,47 +1800,69 @@ class TravelPortPNRResponseParser
     private function getAircraftName(string $code): string
     {
         return match (strtoupper($code)) {
-            '789'       => 'BOEING 787-9',
-            '788'       => 'BOEING 787-8',
-            '77W', '777'=> 'BOEING 777',
-            '738', '73H'=> 'BOEING 737-800',
-            '320', '32A'=> 'AIRBUS A320',
-            '32N'       => 'AIRBUS A320NEO',
-            '321', '32B'=> 'AIRBUS A321',
-            '32Q'       => 'AIRBUS A321NEO',
-            '319'       => 'AIRBUS A319',
-            '333'       => 'AIRBUS A330-300',
-            '332'       => 'AIRBUS A330-200',
-            '388'       => 'AIRBUS A380-800',
-            'DH8'       => 'DEHAVILLAND DASH 8',
-            'DH4'       => 'DEHAVILLAND DASH 400',
-            'AT7'       => 'ATR 72',
-            'AT4'       => 'ATR 42',
-            'CR9'       => 'CANADAIR REGIONAL JET',
-            'E90'       => 'EMBRAER 190',
-            'E75'       => 'EMBRAER 175',
-            default     => $code,
+            '789'        => 'BOEING 787-9',
+            '788'        => 'BOEING 787-8',
+            '787'        => 'BOEING 787',
+            '77W', '777' => 'BOEING 777',
+            '773'        => 'BOEING 777-300',
+            '772'        => 'BOEING 777-200',
+            '76W', '767' => 'BOEING 767',
+            '752', '757' => 'BOEING 757',
+            '744', '747' => 'BOEING 747',
+            '738', '73H' => 'BOEING 737-800',
+            '737'        => 'BOEING 737',
+            '320', '32A' => 'AIRBUS A320',
+            '32N'        => 'AIRBUS A320NEO',
+            '321', '32B' => 'AIRBUS A321',
+            '32Q'        => 'AIRBUS A321NEO',
+            '319'        => 'AIRBUS A319',
+            '333'        => 'AIRBUS A330-300',
+            '332'        => 'AIRBUS A330-200',
+            '351'        => 'AIRBUS A350-900',
+            '388'        => 'AIRBUS A380-800',
+            'DH8'        => 'DEHAVILLAND DASH 8',
+            'DH4'        => 'DEHAVILLAND DASH 400',
+            'AT7'        => 'ATR 72',
+            'AT4'        => 'ATR 42',
+            'CR9'        => 'CANADAIR REGIONAL JET 900',
+            'CR7'        => 'CANADAIR REGIONAL JET 700',
+            'E90'        => 'EMBRAER 190',
+            'E75'        => 'EMBRAER 175',
+            'E95'        => 'EMBRAER 195',
+            default      => $code,
         };
     }
 
     private function getAirlineName(string $code): string
     {
         return match ($code) {
-            'AI' => 'AIR INDIA',
-            'GF' => 'GULF AIR',
-            'BG' => 'BIMAN BANGLADESH',
-            'EK' => 'EMIRATES',
-            'QR' => 'QATAR AIRWAYS',
-            'EY' => 'ETIHAD AIRWAYS',
-            'TK' => 'TURKISH AIRLINES',
-            'SQ' => 'SINGAPORE AIRLINES',
-            'BS' => 'US-BANGLA AIRLINES',
-            'VQ' => 'NOVOAIR',
-            'OB' => 'REGENT AIRWAYS',
-            'FZ' => 'FLYDUBAI',
-            'G8' => 'GO FIRST',
-            '6E' => 'INDIGO',
-            'SG' => 'SPICEJET',
+            'AI'  => 'AIR INDIA',
+            'GF'  => 'GULF AIR',
+            'BG'  => 'BIMAN BANGLADESH',
+            'EK'  => 'EMIRATES',
+            'QR'  => 'QATAR AIRWAYS',
+            'EY'  => 'ETIHAD AIRWAYS',
+            'TK'  => 'TURKISH AIRLINES',
+            'SQ'  => 'SINGAPORE AIRLINES',
+            'BS'  => 'US-BANGLA AIRLINES',
+            'VQ'  => 'NOVOAIR',
+            'OB'  => 'REGENT AIRWAYS',
+            'FZ'  => 'FLYDUBAI',
+            'G8'  => 'GO FIRST',
+            '6E'  => 'INDIGO',
+            'SG'  => 'SPICEJET',
+            'KU'  => 'KUWAIT AIRWAYS',
+            'WY'  => 'OMAN AIR',
+            'SV'  => 'SAUDI ARABIAN AIRLINES',
+            'XY' => 'FLYNAS',
+            'PK'  => 'PAKISTAN INTERNATIONAL',
+            'MH'  => 'MALAYSIA AIRLINES',
+            'TG'  => 'THAI AIRWAYS',
+            'CX'  => 'CATHAY PACIFIC',
+            'BA'  => 'BRITISH AIRWAYS',
+            'LH'  => 'LUFTHANSA',
+            'AF'  => 'AIR FRANCE',
+            'KL'  => 'KLM',
             default => $code,
         };
     }

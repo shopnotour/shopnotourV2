@@ -66,6 +66,88 @@ class FlightController extends Controller
     // MAIN SEARCH METHOD (SIMPLIFIED)
     // ============================================
 
+//    public function index(Request $request)
+//    {
+//        $reissueParams = session('reissue_search_params');
+//
+//        if ($reissueParams) {
+//            $validated = $reissueParams;
+//            session()->forget('reissue_search_params');
+//            Log::info('🔄 Reissue Flight Search', [
+//                'reissue_id' => $validated['reissue_id'] ?? null,
+//                'booking_id' => $validated['booking_id'] ?? null
+//            ]);
+//        } else {
+//            $validated = $request->validate([
+//                'trip_type'       => 'required|in:oneway,round,multi',
+//                'segments'        => 'required|array|min:1',
+//                'segments.*.from' => 'required',
+//                'segments.*.to'   => 'required',
+//                'segments.*.departure' => 'required|date',
+//                'return_date'     => 'nullable|date',
+//                'adults'          => 'required|integer|min:1|max:9',
+//                'children'        => 'nullable|integer|min:0',
+//                'infants'         => 'nullable|integer|min:0',
+//                'children_ages'   => 'nullable|array',
+//                'children_ages.*' => 'integer|min:0|max:12',
+//                'travel_class'    => 'required|in:ECONOMY,BUSINESS,FIRST',
+//                'airline_codes'   => 'nullable',
+//            ]);
+//
+//            $passengerErrors = $this->passengerProcessor->validatePassengers($validated);
+//            if (!empty($passengerErrors)) {
+//                if ($request->expectsJson() || $request->ajax()) {
+//                    return response()->json(['errors' => $passengerErrors], 422);
+//                }
+//                return redirect()->back()->withErrors($passengerErrors)->withInput();
+//            }
+//
+//            $tripValidationErrors = $this->segmentProcessor->validateRoundTrip(
+//                $validated['trip_type'],
+//                $validated['return_date'] ?? '',
+//                $validated['segments']
+//            );
+//            if (!empty($tripValidationErrors)) {
+//                if ($request->expectsJson() || $request->ajax()) {
+//                    return response()->json(['errors' => $tripValidationErrors], 422);
+//                }
+//                return redirect()->back()->withErrors($tripValidationErrors)->withInput();
+//            }
+//        }
+//        SearchSession::log($validated);
+//        // ✅ Streaming response
+//        if ($request->expectsJson() || $request->ajax()) {
+//            session(['flight_search_params' => $validated]);
+//            return response()->stream(function () use ($validated) {
+//
+//
+//                $this->flightSearch->searchStream($validated, function ($flight) {
+//                    echo "data: " . json_encode($flight) . "\n\n";
+//                    ob_flush();
+//                    flush();
+//                });
+//
+//                echo "data: [DONE]\n\n";
+//                ob_flush();
+//                flush();
+//
+//            }, 200, [
+//                'Content-Type'      => 'text/event-stream',
+//                'Cache-Control'     => 'no-cache',
+//                'X-Accel-Buffering' => 'no',
+//            ]);
+//        }
+//
+//        // ✅ Normal page load — frontend streaming করবে
+//        session(['flight_search_params' => $validated]);
+//
+//        return view('Flight::frontend.vueSearch.flight_search', [
+//            'flights'      => [],
+//            'searchParams' => $validated,
+//        ]);
+//    }
+
+
     public function index(Request $request)
     {
         $reissueParams = session('reissue_search_params');
@@ -73,6 +155,7 @@ class FlightController extends Controller
         if ($reissueParams) {
             $validated = $reissueParams;
             session()->forget('reissue_search_params');
+
             Log::info('🔄 Reissue Flight Search', [
                 'reissue_id' => $validated['reissue_id'] ?? null,
                 'booking_id' => $validated['booking_id'] ?? null
@@ -114,12 +197,13 @@ class FlightController extends Controller
                 return redirect()->back()->withErrors($tripValidationErrors)->withInput();
             }
         }
-        SearchSession::log($validated);
-        // ✅ Streaming response
-        if ($request->expectsJson() || $request->ajax()) {
-            session(['flight_search_params' => $validated]);
-            return response()->stream(function () use ($validated) {
 
+        session(['flight_search_params' => $validated]);
+        SearchSession::log($validated);
+
+        // ✅ Streaming response (AJAX/JSON request)
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->stream(function () use ($validated) {
 
                 $this->flightSearch->searchStream($validated, function ($flight) {
                     echo "data: " . json_encode($flight) . "\n\n";
@@ -133,17 +217,20 @@ class FlightController extends Controller
 
             }, 200, [
                 'Content-Type'      => 'text/event-stream',
-                'Cache-Control'     => 'no-cache',
+                'Cache-Control'     => 'no-store, no-cache, must-revalidate',
+                'Pragma'            => 'no-cache',
                 'X-Accel-Buffering' => 'no',
             ]);
         }
 
-        // ✅ Normal page load — frontend streaming করবে
-        session(['flight_search_params' => $validated]);
-
-        return view('Flight::frontend.vueSearch.flight_search', [
+        // ✅ Normal page load
+        return response()->view('Flight::frontend.vueSearch.flight_search', [
             'flights'      => [],
             'searchParams' => $validated,
+        ])->withHeaders([
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma'        => 'no-cache',
+            'Expires'       => '0',
         ]);
     }
 

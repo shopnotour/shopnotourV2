@@ -2,6 +2,7 @@
 use \Illuminate\Support\Facades\Route;
 use Modules\User\Admin\AnnouncementController;
 use Modules\User\Admin\UserDetailsController;
+use Modules\User\Admin\BonusController;
 
 //use Modules\User\Admin\VisitorTrackingController;
 

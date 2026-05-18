@@ -26,6 +26,7 @@ Route::prefix('topic')->name('support.admin.topic.')->group(function () {
 });
 Route::prefix('ticket')->name('support.admin.ticket.')->group(function () {
     Route::get('/', 'Ticket\TicketController@index')->name('index');
+    Route::get('/detail/{id}', 'Ticket\TicketController@detail')->name('detail'); // 1
     Route::post('/bulkEdit', 'Ticket\TicketController@bulkEdit')->name('bulkEdit');
 
     Route::get('/category', 'Ticket\CategoryController@index')->name('category.index');

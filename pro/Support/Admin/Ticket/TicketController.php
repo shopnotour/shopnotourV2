@@ -8,17 +8,22 @@ use Modules\AdminController;
 use Modules\Language\Models\Language;
 use Pro\Support\Models\Ticket;
 use Pro\Support\Models\TicketCat;
+use Pro\Support\Models\TicketReply; // 1
+use Pro\Support\Models\UserNote; // 2
 
 class TicketController extends AdminController
 {
     private TicketCat $cat;
     private Ticket $ticket;
 
-    public function __construct(TicketCat $cat, Ticket $ticket)
+    private TicketReply $reply; // 3
+
+    public function __construct(TicketCat $cat, Ticket $ticket, TicketReply $reply) //5
     {
         $this->setActiveMenu(route('support.admin.ticket.index'));
         $this->cat = $cat;
         $this->ticket = $ticket;
+        $this->reply = $reply; // 4
     }
 
     public function index(Request $request)
@@ -77,6 +82,36 @@ class TicketController extends AdminController
         }
         return redirect()->back()->with('success', __('Update success!'));
     }
+
+//modify by rahat start
+
+    public function detail($id)
+    {
+        $this->checkPermission('support_ticket_view');
+        $ticket = $this->ticket->with(['customer', 'cat'])->find($id);
+        if (empty($ticket)) {
+            return redirect()->back()->with('error', __('Ticket not found'));
+        }
+
+        $data = [
+            'row'         => $ticket,
+            'page_title'  => $ticket->title,
+            'is_agent'    => true,
+            'breadcrumbs' => [
+                [
+                    'name' => __('Tickets'),
+                    'url'  => route('support.admin.ticket.index')
+                ],
+                [
+                    'name'  => $ticket->title,
+                    'class' => 'active'
+                ],
+            ],
+        ];
+        return view('Support::admin.ticket.detail', $data);
+    }
+
+    // end
 
     public function trans($id, $locale)
     {

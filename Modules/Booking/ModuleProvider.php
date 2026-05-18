@@ -91,6 +91,10 @@ class ModuleProvider extends ModuleServiceProvider
             'ticketed',
             'refunded',
             'failed',
+            'user_validation',  //modify by rahat
+            'user_vendor_approved',  //modify by rahat
+            'user_all',  //modify by rahat
+            'user_role',  //modify by rahat
 
         ]);
     }
@@ -307,7 +311,7 @@ class ModuleProvider extends ModuleServiceProvider
 
         $res['cancel_requests'] = [
             'url'        => route('user.cancel.index'),
-            'title'      => __("Ticke Cancel Requests"),
+            'title'      => __("Ticket Cancel Requests"),
             'icon'       => 'ion ion-md-trash',
             'position'   => 66,
             'permission' => 'booking_users_requests',

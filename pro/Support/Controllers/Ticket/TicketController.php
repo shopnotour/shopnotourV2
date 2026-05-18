@@ -135,6 +135,73 @@ class TicketController extends FrontendController
         return view('Support::frontend.ticket.create', $data);
     }
 
+// start
+    public function userIndex()
+    {
+        $params = [
+            's'     => \request('s'),
+            'catId' => \request('catId')
+        ];
+        $isAgent = \auth()->user()->hasPermission('support_ticket_reply');
+        $isAdmin = \auth()->user()->hasPermission('support_ticket_manage');
+        $support_ticket_view_type = setting_item('support_ticket_view_type');
+        if ($isAgent || $isAdmin) {
+            if ($support_ticket_view_type !== 'all' || !$isAdmin) {
+                $params['agentId'] = auth()->id();
+            }
+        } else {
+            $params['customerId'] = auth()->id();
+        }
+        $query = $this->ticket->search($params);
+        $page_title = __('All Tickets');
+        $query->with(['cat', 'last_reply']);
+        if ($isAgent) {
+            $query->orderByRaw("CASE WHEN status = 'open' THEN 1 ELSE 2 END ASC");
+            $query->orderByRaw("CASE WHEN customer_id = last_reply_by THEN 1 ELSE 2 END ASC");
+            $query->orderBy('last_reply_at');
+        } else {
+            $query->orderByDesc('id');
+        }
+        $data = [
+            'page_title' => $page_title,
+            'rows'       => $query->paginate(20),
+            'is_agent'   => $isAgent,
+        ];
+        return view('Support::frontend.ticket.user-index', $data);
+    }
+
+    public function userCreate()
+    {
+        $this->checkPermission('support_ticket_create');
+        $data = [
+            'page_title' => __("Create a ticket"),
+            'categories' => $this->cat::query()->whereStatus('publish')->get()->toTree(),
+        ];
+        return view('Support::frontend.ticket.user-create', $data);
+    }
+
+    public function userDetail($id)
+    {
+        $query = $this->ticket->whereId($id);
+        $isAgent = \auth()->user()->hasPermission('support_ticket_reply');
+        $isAdmin = \auth()->user()->hasPermission('support_ticket_manage');
+        if (!$isAdmin) {
+            if ($isAgent) {
+                $query->whereAgentId(\auth()->id());
+            } else {
+                $query->whereCustomerId(\auth()->id());
+            }
+        }
+        $ticket = $query->first();
+        if (!$ticket) abort(404);
+        $data = [
+            'page_title' => $ticket->title,
+            'row'        => $ticket,
+            'is_agent'   => $isAgent,
+        ];
+        return view('Support::frontend.ticket.user-detail', $data);
+    }
+    //end
 
     public function store(Request $request)
     {
@@ -166,7 +233,7 @@ class TicketController extends FrontendController
         $row->content = strip_tags($row->content);
         $row->save();
 
-        return redirect(route('support.ticket.index'))->with('success', __('Ticket created'));
+        return redirect(route('user.support.ticket.index'))->with('success', __('Ticket created'));
     }
 
 
@@ -224,7 +291,6 @@ class TicketController extends FrontendController
         }
 
         return redirect()->back()->with('danger', __("Can not add reply"));
-
     }
 
     public function action(Request $request, $id)

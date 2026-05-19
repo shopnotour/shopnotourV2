@@ -41,9 +41,8 @@ class TicketController extends FrontendController
             if ($support_ticket_view_type !== 'all' || !$isAdmin) {
                 $params['agentId'] = auth()->id();
             }
-        } else {
-            $params['customerId'] = auth()->id();
         }
+        $params['customerId'] = auth()->id();
         $query = $this->ticket->search($params);
         $page_title = __('All Tickets');
 
@@ -149,19 +148,12 @@ class TicketController extends FrontendController
             if ($support_ticket_view_type !== 'all' || !$isAdmin) {
                 $params['agentId'] = auth()->id();
             }
-        } else {
-            $params['customerId'] = auth()->id();
         }
+        $params['customerId'] = auth()->id();
         $query = $this->ticket->search($params);
         $page_title = __('All Tickets');
         $query->with(['cat', 'last_reply']);
-        if ($isAgent) {
-            $query->orderByRaw("CASE WHEN status = 'open' THEN 1 ELSE 2 END ASC");
-            $query->orderByRaw("CASE WHEN customer_id = last_reply_by THEN 1 ELSE 2 END ASC");
-            $query->orderBy('last_reply_at');
-        } else {
-            $query->orderByDesc('id');
-        }
+        $query->orderByDesc('id');
         $data = [
             'page_title' => $page_title,
             'rows'       => $query->paginate(20),

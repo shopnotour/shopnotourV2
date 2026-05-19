@@ -1,0 +1,187 @@
+<template>
+    <div 
+        class="flight-summary-card bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer"
+        @click="toggleSearchForm"
+    >
+        <div class="p-4 md:p-5">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <!-- Route -->
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-plane-departure text-blue-500"></i>
+                        <span class="font-semibold text-gray-800">{{ summaryData.route || 'Select Route' }}</span>
+                    </div>
+                </div>
+
+                <!-- Separator -->
+                <div class="hidden md:block w-px h-8 bg-gray-200"></div>
+
+                <!-- Trip Type -->
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-route text-green-500"></i>
+                    <span class="text-gray-700">{{ summaryData.tripTypeLabel }}</span>
+                </div>
+
+                <!-- Separator -->
+                <div class="hidden md:block w-px h-8 bg-gray-200"></div>
+
+                <!-- Dates -->
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-calendar-alt text-purple-500"></i>
+                    <span class="text-gray-700">{{ summaryData.dates || 'Select dates' }}</span>
+                </div>
+
+                <!-- Separator -->
+                <div class="hidden md:block w-px h-8 bg-gray-200"></div>
+
+                <!-- Travelers & Class -->
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-users text-orange-500"></i>
+                        <span class="text-gray-700">{{ summaryData.travelers || '0 Travelers' }}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-chair text-indigo-500"></i>
+                        <span class="text-gray-700">{{ summaryData.travelClass || 'Economy' }}</span>
+                    </div>
+                </div>
+
+                <!-- Toggle Button -->
+                <div class="ml-auto">
+                    <button
+                        class="group flex items-center justify-center gap-2 px-4 py-2 md:px-6 md:py-3
+                            bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800
+                            text-white font-semibold rounded-full shadow-md hover:shadow-lg
+                            transition-all duration-300 transform hover:scale-105"
+                        @click.stop="toggleSearchForm"
+                    >
+                        <i class="fas fa-search text-sm md:text-base group-hover:rotate-12 transition-transform duration-300"></i>
+
+                        <span class="text-xs md:text-sm">
+                            {{ isFormVisible ? 'Hide Search' : 'Search Flights' }}
+                        </span>
+
+                        <i
+                            class="fas fa-chevron-down text-xs transition-transform duration-300"
+                            :class="{ 'rotate-180': isFormVisible }"
+                        ></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<script>
+export default {
+    name: 'FlightSearchSummary',
+    data() {
+        return {
+            summaryData: {
+                route: '',
+                to: '',
+                tripType: 'round',
+                tripTypeLabel: 'Round Trip',
+                dates: '',
+                travelers: '',
+                travelClass: 'Economy'
+            },
+            isFormVisible: false
+        };
+    },
+    mounted() {
+        // Listen for summary updates from the search form
+        window.addEventListener('message', this.handleSummaryUpdate);
+        
+        // Also listen for search form toggle state
+        document.addEventListener('searchFormToggled', this.handleFormToggle);
+        
+        // Initial check for form visibility
+        this.checkFormVisibility();
+    },
+    beforeDestroy() {
+        window.removeEventListener('message', this.handleSummaryUpdate);
+        document.removeEventListener('searchFormToggled', this.handleFormToggle);
+    },
+    methods: {
+        handleSummaryUpdate(event) {
+            if (event.data.type === 'flight-search-summary-update') {
+                this.summaryData = {
+                    ...this.summaryData,
+                    ...event.data.summary,
+                    tripTypeLabel: this.getTripTypeLabel(event.data.summary.tripType)
+                };
+            }
+        },
+        
+        getTripTypeLabel(tripType) {
+            const labels = {
+                'oneway': 'One Way',
+                'round': 'Round Trip',
+                'multi': 'Multi City'
+            };
+            return labels[tripType] || 'Round Trip';
+        },
+        
+        handleFormToggle(event) {
+            this.isFormVisible = event.detail?.isVisible || false;
+        },
+        
+        checkFormVisibility() {
+            const formSection = document.getElementById('searchFormSection');
+            if (formSection) {
+                this.isFormVisible = formSection.classList.contains('active');
+            }
+        },
+        
+        toggleSearchForm() {
+            const toggleBtn = document.getElementById('searchToggleBtn');
+            if (toggleBtn) {
+                toggleBtn.click(); // Trigger the existing toggle button
+            }
+        }
+    }
+};
+</script>
+
+<style scoped>
+.flight-summary-card {
+    transition: all 0.3s ease;
+    border: 1px solid #e5e7eb;
+}
+
+.flight-summary-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+}
+
+.rotate-180 {
+    transform: rotate(180deg);
+}
+
+@media (max-width: 768px) {
+    .flight-summary-card .flex-wrap {
+        flex-direction: column;
+        align-items: flex-start !important;
+    }
+
+    .flight-summary-card .ml-auto {
+        margin-left: 0;
+        margin-top: 12px;
+        align-self: stretch;
+        width: 100%;
+    }
+
+    .flight-summary-card .ml-auto button {
+        width: 100%;
+    }
+
+    .hidden.md\:block {
+        display: none !important;
+    }
+
+    .flight-summary-card .flex-wrap > div {
+        width: 100%;
+    }
+}
+</style>

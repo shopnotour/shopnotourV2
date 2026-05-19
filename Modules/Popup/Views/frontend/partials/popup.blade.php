@@ -1,9 +1,24 @@
 @php
     use Modules\Popup\Models\PopupMessage;
+
     $popup = PopupMessage::active()
         ->forPage($pageKey ?? '')
         ->latest()
         ->first();
+
+    // Convert YouTube watch URL to embed URL
+    $youtubeEmbedUrl = null;
+
+    if ($popup && $popup->youtube_embed_url) {
+        $youtubeEmbedUrl = str_replace(
+            "watch?v=",
+            "embed/",
+            $popup->youtube_embed_url
+        );
+
+        // Add autoplay params
+        $youtubeEmbedUrl .= '?autoplay=1&mute=1&rel=0';
+    }
 @endphp
 
 @if($popup)
@@ -20,7 +35,7 @@
             $c = $colors[$popup->type] ?? $colors['info'];
         @endphp
 
-        <div style="background:#fff;border-radius:14px;width:100%;max-width:500px;margin:0 auto;
+        <div style="background:#fff;border-radius:14px;width:100%;max-width:900px;margin:0 auto;
                 box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden;position:relative;">
 
             {{-- Colored top bar --}}
@@ -67,11 +82,12 @@
                         {{-- YouTube Link Media --}}
                         @elseif($popup->media === 'youtube_link' && $popup->youtube_embed_url)
                             <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
-                                <iframe src="{{ $popup->youtube_embed_url }}"
-                                        style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;"
-                                        frameborder="0"
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                        allowfullscreen>
+                                <iframe 
+                                    src="{{ $youtubeEmbedUrl }}"
+                                    style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;"
+                                    frameborder="0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowfullscreen>
                                 </iframe>
                             </div>
                         @endif
@@ -235,27 +251,42 @@
         });
     </script>
 
-    {{-- Optional: Add responsive styles for mobile --}}
+
     <style>
+        /* Desktop / Laptop */
+        @media (min-width: 1200px) {
+            #userPopupBox {
+                max-width: 1080px !important;
+            }
+        }
+
+        /* Medium screens */
+        @media (min-width: 768px) and (max-width: 1199px) {
+            #userPopupBox {
+                max-width: 800px !important;
+            }
+        }
+
+        /* Mobile */
         @media (max-width: 640px) {
-            #userPopupOverlay > div {
+            #userPopupBox {
                 max-width: 95% !important;
                 margin: 0 auto !important;
             }
-            
-            #userPopupOverlay > div > div {
+
+            #userPopupBox > div {
                 padding: 20px !important;
             }
-            
+
             #userPopupOverlay h4 {
                 font-size: 1rem !important;
             }
-            
+
             #userPopupOverlay p {
                 font-size: 0.85rem !important;
             }
         }
-        
+
         /* Animation for popup */
         @keyframes slideUp {
             from {
@@ -267,11 +298,11 @@
                 transform: translateY(0);
             }
         }
-        
-        #userPopupOverlay > div {
+
+        #userPopupBox {
             animation: slideUp 0.3s ease-out;
         }
-        
+
         /* Smooth transition for overlay */
         #userPopupOverlay {
             transition: all 0.3s ease;

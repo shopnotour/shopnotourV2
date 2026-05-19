@@ -17,7 +17,7 @@
         <div class="header-menu__content">
             <div class="mobile-bg js-mobile-bg"></div>
             <div class="menu js-navList">
-                @php $textColor = $textColor ?? 'text-white';
+                @php $textColor = $textColor ?? 'text-dark-1';
                     if ($headerStyle == 'transparent_v5' || $headerStyle == 'transparent_v6' || $headerStyle == 'transparent_v9') $textColor = 'text-dark-1';
                     generate_menu('primary',[
                         'walker'=>\Themes\GoTrip\Core\Walkers\MenuWalker::class,

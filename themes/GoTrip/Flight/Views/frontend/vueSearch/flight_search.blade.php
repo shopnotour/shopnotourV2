@@ -41,19 +41,6 @@
         }
         .bg-slide.active { opacity: 1; z-index: 1; }
 
-        /* ─────────────────────────────────────────────
-           SEARCH FORM SECTION
-           ✅ KEY FIX:
-           overflow: visible রাখুন — sidebar এর sticky
-           apply button ও price range clip হবে না।
-
-           Collapse animation শুধু max-height + opacity
-           দিয়ে করুন। overflow দিয়ে নয়।
-
-           Browser spec: overflow-x:hidden + overflow-y:visible
-           একসাথে কাজ করে না — y automatically auto হয়।
-           তাই overflow সম্পূর্ণ visible রাখতে হবে।
-        ───────────────────────────────────────────── */
         #searchFormSection {
             /* collapse state */
             max-height: 0;
@@ -117,7 +104,7 @@
            background দেখা যায়
         ───────────────────────────────────────────── */
         .search-form-inner {
-            min-height: 420px;
+            /* min-height: 420px; */
             position: relative;
         }
 
@@ -137,8 +124,15 @@
 
     <div class="bravo_search_flight">
 
+        {{-- ── Flight Summary Section ── --}}
+        <div class="flight-summary-wrapper bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
+            <div class="container mx-auto px-4">
+                <div id="flight-search-summary"></div>
+            </div>
+        </div>
+
         {{-- ── Toggle Button ── --}}
-        <div class="container mx-auto px-4 pt-4 pb-2">
+        <div class="container hidden mx-auto px-4 pt-4 pb-2">
             <button
                 id="searchToggleBtn"
                 class="group mx-auto flex items-center justify-center gap-2 px-6 py-3 md:px-8 md:py-4
@@ -152,12 +146,7 @@
         </div>
 
         {{-- ── Search Form Section ── --}}
-        {{--
-            ✅ STRUCTURE NOTE:
-            - #searchFormSection = overflow:visible — sidebar clip হবে না
-            - .bg-slider = position:absolute + overflow:hidden — background clip হবে
-            - .search-form-inner = position:relative, min-height — content এর container
-        --}}
+
         <div id="searchFormSection" class="relative">
 
             {{-- Background slider — absolute, নিজে overflow:hidden --}}
@@ -177,15 +166,15 @@
             {{-- Content — relative z-index:2, overflow:visible --}}
             <div class="search-form-inner" style="overflow:visible; position:relative; z-index:2;">
                 <div class="container mx-auto px-4 py-8">
-                    <div class="text-center mb-6">
+                    {{-- <div class="text-center mb-6">
                         <h1 class="text-3xl md:text-4xl lg:text-5xl font-bold text-white drop-shadow-lg">
                             {{ setting_item_with_lang("flight_page_search_title") ?? 'Search for Flights' }}
                         </h1>
                         <p class="text-white/90 mt-2 text-base md:text-lg">
                             Find the best deals on flights worldwide
                         </p>
-                    </div>
-                    <div class="container mx-auto">
+                    </div> --}}
+                    <div class="container mx-auto justify-center items-center">
                         <div class="row justify-content-center">
                             <div class="col-md-10">
                                 <div id="flight-search-form"></div>
@@ -245,21 +234,30 @@
                     const isActive = section.classList.toggle('active');
 
                     /* chevron rotate */
-                    if (chevron)  chevron.style.transform  = isActive ? 'rotate(180deg)' : 'rotate(0deg)';
-                    /* button text */
-                    if (btnText)  btnText.textContent       = isActive ? 'Hide Search' : 'Search Flights';
+                    if (chevron)
+                        chevron.style.transform = isActive
+                            ? 'rotate(180deg)'
+                            : 'rotate(0deg)';
 
-                    /* scroll into view when opening */
-                    if (isActive) {
-                        setTimeout(() => {
-                            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }, 100);
-                    }
+                    /* button text */
+                    if (btnText)
+                        btnText.textContent = isActive
+                            ? 'Hide Search'
+                            : 'Search Flights';
+
+                    /* Dispatch event for summary component */
+                    const toggleEvent = new CustomEvent('searchFormToggled', {
+                        detail: { isVisible: isActive }
+                    });
+
+                    document.dispatchEvent(toggleEvent);
 
                     /* close flatpickr calendars when collapsing */
                     if (!isActive) {
                         document.querySelectorAll('.flatpickr-calendar')
-                            .forEach(cal => { cal.style.display = 'none'; });
+                            .forEach(cal => {
+                                cal.style.display = 'none';
+                            });
                     }
                 });
             }

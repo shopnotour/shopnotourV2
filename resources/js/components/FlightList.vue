@@ -685,6 +685,14 @@ export default {
     cursor: pointer;
     border-radius: 6px;
     font-size: 12px;
+    font-weight: 800;
+}
+
+@media (max-width: 480px) {
+    .day-btn {
+        padding: 2px 4px;
+        font-size: 8px;
+    }
 }
 
 .day-btn:hover {
@@ -699,6 +707,16 @@ export default {
     margin-left: 8px;
     font-size: 11px;
     color: #9ca3af;
+}
+
+@media (max-width: 480px) {
+    .pagination-info {
+        margin-left: 2px;
+        font-size: 9px;
+    }
+
+    .fl-count strong { font-size: 12px; }
+    .fl-count span   { font-size: 8px; }
 }
 
 .fl-sort-select {
@@ -720,6 +738,14 @@ export default {
     background: red;
     color: white;
     cursor: pointer;
+}
+
+@media (max-width: 480px) {
+    .fl-sort-select select {
+        border-radius: 6px;
+        padding: 3px 5px;
+        font-size: 10px;
+    }
 }
 
 /* Dropdown items */

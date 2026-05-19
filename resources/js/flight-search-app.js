@@ -2,8 +2,19 @@ import Vue from 'vue/dist/vue.esm.js';
 import FlightSearch from './components/FlightSearchPage.vue';
 import FlightSearchForm from './components/Flightsearchform.vue';
 import FlightHomepageSections from './components/FlightHomepageSections.vue';
+import FlightSearchSummary from './components/FlightSearchSummary.vue'; // Add this
 
 console.log('✅ flight-search-app.js executed');
+
+// ── Flight Search Summary (always visible above toggle button) ──
+const summaryEl = document.getElementById('flight-search-summary');
+if (summaryEl) {
+    new Vue({
+        el: '#flight-search-summary',
+        components: { FlightSearchSummary },
+        template: `<FlightSearchSummary />`
+    });
+}
 
 // ── Search Form (home page + search result page দুটোতেই আছে) ──
 const searchFormEl = document.getElementById('flight-search-form');
@@ -54,7 +65,6 @@ if (searchAppEl) {
             </div>
         `
     });
-
 }
 
 // ── Homepage Sections (home page এ আছে) ──

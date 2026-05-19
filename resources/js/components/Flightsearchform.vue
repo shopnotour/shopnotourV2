@@ -625,28 +625,37 @@ export default {
     watch: {
         segments: {
             handler(segs) {
-                if (
-                    this.tripType === 'round' &&
-                    segs.length &&
-                    segs[0].departure
-                ) {
+                // Update return date for round trip
+                if (this.tripType === 'round' && segs.length && segs[0].departure) {
                     const depDate = new Date(segs[0].departure);
-
-                    // Only update return date if empty or invalid
-                    if (
-                        !this.returnDate ||
-                        new Date(this.returnDate) <= depDate
-                    ) {
+                    if (!this.returnDate || new Date(this.returnDate) <= depDate) {
                         const nextDay = new Date(depDate);
                         nextDay.setDate(nextDay.getDate() + 1);
-
-                        this.returnDate = nextDay
-                            .toISOString()
-                            .split('T')[0];
+                        this.returnDate = nextDay.toISOString().split('T')[0];
                     }
                 }
+                // Send summary update
+                this.sendSummaryUpdate();
             },
             deep: true
+        },
+        tripType() {
+            this.sendSummaryUpdate();
+        },
+        returnDate() {
+            this.sendSummaryUpdate();
+        },
+        adults() {
+            this.sendSummaryUpdate();
+        },
+        children() {
+            this.sendSummaryUpdate();
+        },
+        infants() {
+            this.sendSummaryUpdate();
+        },
+        travelClass() {
+            this.sendSummaryUpdate();
         }
     },
 
@@ -688,6 +697,53 @@ export default {
                 this.pickerMonth = new Date().getMonth();
             }
             this.pickerOpen = true;
+        },
+
+        // Add this method to send summary updates
+        sendSummaryUpdate() {
+            try {
+                // Format route (From → To)
+                const firstSegment = this.segments[0];
+                const fromCode = firstSegment?.from_display?.split(' - ')[0] || '';
+                const toCode = firstSegment?.to_display?.split(' - ')[0] || '';
+                const route = `${fromCode} → ${toCode}`;
+                
+                // Format dates
+                let dates = '';
+                if (this.tripType === 'oneway') {
+                    const dep = firstSegment?.departure ? this.formatDisplayDate(firstSegment.departure) : '';
+                    dates = `Depart: ${dep}`;
+                } else if (this.tripType === 'round') {
+                    const dep = firstSegment?.departure ? this.formatDisplayDate(firstSegment.departure) : '';
+                    const ret = this.returnDate ? this.formatDisplayDate(this.returnDate) : '';
+                    dates = `${dep} → ${ret}`;
+                } else if (this.tripType === 'multi') {
+                    const first = firstSegment?.departure ? this.formatDisplayDate(firstSegment.departure) : '';
+                    const last = this.segments[this.segments.length - 1]?.departure ? 
+                        this.formatDisplayDate(this.segments[this.segments.length - 1].departure) : '';
+                    dates = `${first} → ${last}`;
+                }
+                
+                // Format travelers
+                const travelers = `${this.totalPassengers} Traveler${this.totalPassengers !== 1 ? 's' : ''}`;
+                
+                // Format class
+                const travelClassLabel = this.classes.find(c => c.value === this.travelClass)?.label || 'Economy';
+                
+                // Send to parent window
+                window.postMessage({
+                    type: 'flight-search-summary-update',
+                    summary: {
+                        route: route,
+                        tripType: this.tripType,
+                        dates: dates,
+                        travelers: travelers,
+                        travelClass: travelClassLabel
+                    }
+                }, '*');
+            } catch (error) {
+                console.error('Error sending summary update:', error);
+            }
         },
 
         closePicker() {
@@ -1143,7 +1199,11 @@ export default {
 
             this.isSearching = true;
             await this.doStream(searchUrl);
-        }, { once: true });  // ✅ একবারই fire হবে
+        }, { once: true }); 
+        
+        this.$nextTick(() => {
+            this.sendSummaryUpdate();
+        });
     },
 
     beforeDestroy() {
@@ -1497,7 +1557,7 @@ export default {
 /* Travelers panel */
 .fsf-traveler-panel {
     position: absolute;
-    bottom: calc(100% + 8px);
+    top: calc(100% + 8px);
     left: 0;
     background: #fff;
     border: 1.5px solid var(--fsf-border);

@@ -51,6 +51,12 @@ class ModuleProvider extends ModuleServiceProvider
             'booking_duplicate',
             'booking_list',
 
+            'booking_void_request',
+            'booking_refund_request',
+            'booking_reissue_request',
+            'booking_ssr_request',
+            'booking_cancel_request',
+
             'report_account',
             'visitor_view',
             'visitor_ip',
@@ -203,7 +209,7 @@ class ModuleProvider extends ModuleServiceProvider
                     'cancel'=>[
                         'url'        => route('cancellations.index'),
                         'title'      => __('Cancel'),
-                        'permission' => 'booking_cancel',
+                        'permission' => 'booking_cancel_request',
                     ],
                 ]
             ],

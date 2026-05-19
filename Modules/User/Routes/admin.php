@@ -22,6 +22,8 @@ Route::get('/update/{id}', 'UserController@update')->name('user.admin.details');
 Route::get('/userUpgradeRequest', 'UserController@userUpgradeRequest')->name('user.admin.upgrade');
 Route::get('/upgrade/{id}','UserController@userUpgradeRequestApprovedId')->name('user.admin.upgradeId');
 Route::post('/userUpgradeRequestApproved', 'UserController@userUpgradeRequestApproved')->name('user.admin.userUpgradeRequestApproved');
+Route::get('user/upgrade-request/cancel/{id}',  'UserController@userUpgradeRequestCancel')
+    ->name('user.admin.upgradeCancel');
 
 Route::get('admin/users', [UserDetailsController::class, 'index'])->name('admin.users.index');
 Route::get('admin/users/{id}/bookings', [UserDetailsController::class, 'bookings'])->name('admin.users.bookings');

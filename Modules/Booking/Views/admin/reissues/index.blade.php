@@ -694,54 +694,232 @@
 
         {{-- Details Modal --}}
         <div class="modal fade" id="modal-reissue-{{ $reissue->id }}" tabindex="-1" role="dialog">
-            <div class="modal-dialog modal-lg">
+            <div class="modal-dialog modal-xl">
                 <div class="modal-content">
-                    <div class="modal-header">
+                    <div class="modal-header bg-primary text-white">
                         <h5 class="modal-title">
                             <i class="fa fa-file-text"></i> {{ __('Reissue Request Details #') }}{{ $reissue->id }}
                         </h5>
-                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                        <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
                     </div>
                     <div class="modal-body">
-                        <div class="row">
+                        {{-- Basic Information --}}
+                        <div class="row mb-4">
                             <div class="col-md-6">
-                                <table class="table table-bordered">
-                                    <tr><th width="40%">{{ __('Reissue ID') }}</th><td>{{ $reissue->id }}</td></tr>
-                                    <tr><th>{{ __('Old Booking') }}</th><td><a href="{{ route('admin.bookings.show', $reissue->booking_id) }}" target="_blank">#{{ $reissue->booking_id }}</a></td></tr>
-                                    <tr>
-                                        <th>{{ __('New Booking') }}</th>
-                                        <td>
-                                            @if($reissue->new_booking_id)
-                                                <a href="{{ route('admin.bookings.show', $reissue->new_booking_id) }}" target="_blank">#{{ $reissue->new_booking_id }}</a>
-                                            @else Not set @endif
-                                        </td>
-                                    </tr>
-                                    <tr><th>{{ __('Old PNR') }}</th><td><strong>{{ $reissue->old_pnr }}</strong></td></tr>
-                                    <tr><th>{{ __('New PNR') }}</th><td><strong class="text-success">{{ $reissue->new_pnr ?: 'Not set' }}</strong></td></tr>
-                                    <tr>
-                                        <th>{{ __('Status') }}</th>
-                                        <td>
-                                            <span class="badge badge-{{ $statusColors[$reissue->status] ?? 'secondary' }}">
-                                                {{ ucfirst(str_replace('_', ' ', $reissue->status)) }}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                </table>
+                                <div class="card">
+                                    <div class="card-header bg-info text-white">
+                                        <strong><i class="fa fa-info-circle"></i> Basic Information</strong>
+                                    </div>
+                                    <div class="card-body">
+                                        <table class="table table-bordered table-sm">
+                                            <tr><th width="40%">Reissue ID</th><td>{{ $reissue->id }}</td></tr>
+                                            <tr><th>Old Booking</th><td><a href="{{ route('admin.bookings.show', $reissue->booking_id) }}" target="_blank">#{{ $reissue->booking_id }}</a></td></tr>
+                                            <tr><th>New Booking</th><td>@if($reissue->new_booking_id)<a href="{{ route('admin.bookings.show', $reissue->new_booking_id) }}" target="_blank">#{{ $reissue->new_booking_id }}</a>@else Not set @endif</td></tr>
+                                            <tr><th>Old PNR</th><td><strong>{{ $reissue->old_pnr }}</strong></td></tr>
+                                            <tr><th>New PNR</th><td><strong class="text-success">{{ $reissue->new_pnr ?: 'Not set' }}</strong></td></tr>
+                                            <tr><th>Status</th><td><span class="badge badge-{{ $statusColors[$reissue->status] ?? 'secondary' }}">{{ ucfirst(str_replace('_', ' ', $reissue->status)) }}</span></td></tr>
+                                            <tr><th>Requested At</th><td>{{ $reissue->created_at->format('d M Y, h:i A') }}</td></tr>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
                             <div class="col-md-6">
-                                <table class="table table-bordered">
-                                    <tr><th width="40%">{{ __('Fare Difference') }}</th><td>{{ $reissue->fare_difference ? format_money_main($reissue->fare_difference) : 'Not set' }}</td></tr>
-                                    <tr><th>{{ __('Reissue Charges') }}</th><td>{{ $reissue->reissue_charges ? format_money_main($reissue->reissue_charges) : 'Not set' }}</td></tr>
-                                    <tr><th>{{ __('Total Amount') }}</th><td><strong class="text-primary">{{ $reissue->total_amount ? format_money_main($reissue->total_amount) : 'Not calculated' }}</strong></td></tr>
-                                    <tr><th>{{ __('Requested At') }}</th><td>{{ $reissue->created_at->format('d M Y, h:i A') }}</td></tr>
-                                </table>
+                                <div class="card">
+                                    <div class="card-header bg-success text-white">
+                                        <strong><i class="fa fa-money"></i> Financial Details</strong>
+                                    </div>
+                                    <div class="card-body">
+                                        <table class="table table-bordered table-sm">
+                                            <tr><th width="40%">Fare Difference</th><td>{{ $reissue->fare_difference ? format_money_main($reissue->fare_difference) : 'Not set' }}</td></tr>
+                                            <tr><th>Reissue Charges</th><td>{{ $reissue->reissue_charges ? format_money_main($reissue->reissue_charges) : 'Not set' }}</td></tr>
+                                            <tr><th>Service Charge</th><td>{{ $reissue->service_charge ? format_money_main($reissue->service_charge) : 'Not set' }}</td></tr>
+                                            <tr><th>Total Amount</th><td><strong class="text-primary">{{ $reissue->total_amount ? format_money_main($reissue->total_amount) : 'Not calculated' }}</strong></td></tr>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-{{--                    @include('Booking::admin.reissues.details', ['reissue' => $reissue])--}}
+                        {{-- Old Flight Details --}}
+                        @if($reissue->old_flight_details)
+                        <div class="card mb-4">
+                            <div class="card-header bg-warning text-dark">
+                                <strong><i class="fa fa-plane-departure"></i> Old Flight Details</strong>
+                            </div>
+                            <div class="card-body">
+                                @php $oldFlight = $reissue->old_flight_details; @endphp
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <strong>From:</strong> {{ $oldFlight['from'] ?? 'N/A' }}<br>
+                                        <strong>To:</strong> {{ $oldFlight['to'] ?? 'N/A' }}<br>
+                                        <strong>Airline:</strong> {{ $oldFlight['airline'] ?? 'N/A' }}
+                                    </div>
+                                    <div class="col-md-4">
+                                        <strong>Trip Type:</strong> {{ ucfirst(str_replace('_', ' ', $oldFlight['trip_type'] ?? 'N/A')) }}<br>
+                                        <strong>Departure Date:</strong> {{ isset($oldFlight['departure_date']) ? date('d M Y', strtotime($oldFlight['departure_date'])) : 'N/A' }}
+                                    </div>
+                                    <div class="col-md-4">
+                                        <strong>Return Date:</strong> {{ isset($oldFlight['return_date']) ? date('d M Y', strtotime($oldFlight['return_date'])) : 'N/A' }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        @endif
+
+                        {{-- New Flight Details --}}
+                        @if($reissue->new_flight_details)
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                <strong><i class="fa fa-plane-arrival"></i> New Flight Details</strong>
+                            </div>
+                            <div class="card-body">
+                                @php 
+                                    $newFlight = $reissue->new_flight_details;
+                                    $provider = $newFlight['provider'] ?? 'N/A';
+                                    $source = $newFlight['source'] ?? 'N/A';
+                                @endphp
+                                
+                                {{-- Flight Provider Info --}}
+                                <div class="alert alert-info mb-3">
+                                    <strong><i class="fa fa-info-circle"></i> Provider:</strong> {{ $provider }} (Source: {{ $source }})
+                                </div>
+
+                                {{-- Price Information --}}
+                                @if(isset($newFlight['price']))
+                                <div class="alert alert-dark mt-3">
+                                    <strong><i class="fa fa-tags"></i> Price Breakdown:</strong>
+                                    <div class="row mt-2">
+                                        <div class="col-md-3">
+                                            <small>Base Fare:</small><br>
+                                            <strong>{{ $newFlight['price']['currency'] ?? 'BDT' }} {{ number_format($newFlight['price']['api_base_fare'] ?? 0, 2) }}</strong>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <small>Tax:</small><br>
+                                            <strong>{{ $newFlight['price']['currency'] ?? 'BDT' }} {{ number_format($newFlight['price']['api_tax'] ?? 0, 2) }}</strong>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <small>Subtotal:</small><br>
+                                            <strong>{{ $newFlight['price']['currency'] ?? 'BDT' }} {{ number_format($newFlight['price']['api_subtotal'] ?? 0, 2) }}</strong>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <small>Total:</small><br>
+                                            <strong class="text-success">{{ $newFlight['price']['currency'] ?? 'BDT' }} {{ number_format($newFlight['price']['total'] ?? 0, 2) }}</strong>
+                                        </div>
+                                    </div>
+                                    @if(isset($newFlight['price']['taxes_breakdown']) && count($newFlight['price']['taxes_breakdown']) > 0)
+                                        <hr>
+                                        <strong>Taxes Breakdown:</strong>
+                                        <div class="row mt-2">
+                                            @foreach($newFlight['price']['taxes_breakdown'] as $tax)
+                                            <div class="col-md-4">
+                                                <small>{{ $tax['code'] }} - {{ $tax['description'] }}:</small>
+                                                <strong>{{ number_format($tax['amount'], 2) }} {{ $tax['currency'] }}</strong>
+                                            </div>
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                </div>
+                                @endif
+
+                                {{-- Passenger Information --}}
+                                @if(isset($newFlight['passengers']) && count($newFlight['passengers']) > 0)
+                                <div class="mt-3">
+                                    <strong><i class="fa fa-users"></i> Passenger Information:</strong>
+                                    <table class="table table-sm table-bordered mt-2">
+                                        <thead class="thead-light">
+                                            <tr>
+                                                <th>Type</th>
+                                                <th>Count</th>
+                                                <th>Total Fare</th>
+                                                <th>Baggage</th>
+                                                <th>Refundable</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($newFlight['passengers'] as $passenger)
+                                            <tr>
+                                                <td>{{ $passenger['type_label'] ?? $passenger['type'] }}</td>
+                                                <td>{{ $passenger['count'] }}</td>
+                                                <td>{{ number_format($passenger['total_fare'], 2) }} {{ $newFlight['price']['currency'] ?? 'BDT' }}</td>
+                                                <td>
+                                                    @if(isset($passenger['baggage']))
+                                                        {{ $passenger['baggage']['weight'] ?? 0 }} {{ $passenger['baggage']['unit'] ?? 'kg' }}
+                                                    @else
+                                                        N/A
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    @if(isset($passenger['refundable']))
+                                                        <span class="badge badge-{{ $passenger['refundable'] ? 'success' : 'danger' }}">
+                                                            {{ $passenger['refundable'] ? 'Yes' : 'No' }}
+                                                        </span>
+                                                    @else
+                                                        N/A
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                                @endif
+
+                                {{-- Additional Info --}}
+                                <div class="row mt-3">
+                                    <div class="col-md-4">
+                                        <small><strong>Validating Carrier:</strong></small><br>
+                                        {{ $newFlight['validating_carrier'] ?? 'N/A' }}
+                                    </div>
+                                    <div class="col-md-4">
+                                        <small><strong>eTicketable:</strong></small><br>
+                                        <span class="badge badge-{{ ($newFlight['eTicketable'] ?? false) ? 'success' : 'warning' }}">
+                                            {{ ($newFlight['eTicketable'] ?? false) ? 'Yes' : 'No' }}
+                                        </span>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <small><strong>Refundable:</strong></small><br>
+                                        <span class="badge badge-{{ ($newFlight['refundable'] ?? false) ? 'success' : 'danger' }}">
+                                            {{ ($newFlight['refundable'] ?? false) ? 'Yes' : 'No' }}
+                                        </span>
+                                    </div>
+                                </div>
+                                @if(isset($newFlight['last_ticket_date']))
+                                <div class="mt-2">
+                                    <small><strong>Last Ticket Date:</strong></small><br>
+                                    {{ date('d M Y', strtotime($newFlight['last_ticket_date'])) }} {{ $newFlight['last_ticket_time'] ?? '' }}
+                                </div>
+                                @endif
+                            </div>
+                        </div>
+                        @endif
+
+                        {{-- Reason & Airline Response --}}
+                        @if($reissue->reason || $reissue->airline_response)
+                        <div class="card">
+                            <div class="card-header bg-secondary text-white">
+                                <strong><i class="fa fa-comment"></i> Additional Information</strong>
+                            </div>
+                            <div class="card-body">
+                                @if($reissue->reason)
+                                    <div class="alert alert-warning">
+                                        <strong>Reason for Reissue:</strong><br>
+                                        {{ $reissue->reason }}
+                                    </div>
+                                @endif
+                                @if($reissue->airline_response)
+                                    <div class="alert alert-info">
+                                        <strong>Airline Response:</strong><br>
+                                        {{ $reissue->airline_response }}
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                        @endif
+                    </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ __('Close') }}</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                            <i class="fa fa-times"></i> {{ __('Close') }}
+                        </button>
                     </div>
                 </div>
             </div>

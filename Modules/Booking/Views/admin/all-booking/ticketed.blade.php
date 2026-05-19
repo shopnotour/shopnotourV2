@@ -269,51 +269,129 @@
                                         <div class="dropdown-menu dropdown-menu-right shadow" style="min-width:190px">
 
                                             {{-- View Detail --}}
-                                            <a class="dropdown-item btn-detail-booking" href="#"
-                                               data-ajax="{{ route('booking.modal', $booking->id) }}"
-                                               data-toggle="modal" data-id="{{ $booking->id }}"
-                                               data-target="#modal_booking_detail">
-                                                <i class="fa fa-eye text-info"></i> {{ __('View Detail') }}
-                                            </a>
+                                            @if(auth()->user()->hasPermission('booking_details'))
+                                                <a class="dropdown-item btn-detail-booking" href="#"
+                                                data-ajax="{{ route('booking.modal', $booking->id) }}"
+                                                data-toggle="modal" data-id="{{ $booking->id }}"
+                                                data-target="#modal_booking_detail">
+                                                    <i class="fa fa-eye text-info"></i> {{ __('View Detail') }}
+                                                </a>
+                                            @endif
 
                                             {{-- Edit Booking --}}
-                                            <a class="dropdown-item" href="{{ route('admin.bookings.edit', $booking->id) }}">
-                                                <i class="fa fa-edit text-warning"></i> {{ __('Edit Booking') }}
-                                            </a>
+                                            @if(auth()->user()->hasPermission('booking_pnr_edit'))
+                                                <a class="dropdown-item" href="{{ route('admin.bookings.edit', $booking->id) }}">
+                                                    <i class="fa fa-edit text-warning"></i> {{ __('Edit Booking') }}
+                                                </a>
+                                            @endif
 
                                             {{-- Duplicate --}}
-                                            <a class="dropdown-item btn-duplicate-booking" href="#"
-                                               data-id="{{ $booking->id }}"
-                                               data-code="{{ $booking->code ?? '#' . $booking->id }}">
-                                                <i class="fa fa-copy text-primary"></i> {{ __('Duplicate') }}
-                                            </a>
+                                            @if(auth()->user()->hasPermission('booking_pnr_edit'))
+                                                <a class="dropdown-item btn-duplicate-booking" href="#"
+                                                data-id="{{ $booking->id }}"
+                                                data-code="{{ $booking->code ?? '#' . $booking->id }}">
+                                                    <i class="fa fa-copy text-primary"></i> {{ __('Duplicate') }}
+                                                </a>
+                                            @endif
 
                                             <div class="dropdown-divider"></div>
 
                                             {{-- Edit PNR --}}
-                                            <a class="dropdown-item btn-pnr-edit" href="#"
-                                               data-id="{{ $booking->id }}"
-                                               data-pnr="{{ $booking->pnr_id }}"
-                                               data-source="{{ $booking->source }}"
-                                               data-status="{{ $booking->status }}"
-                                               data-code="{{ $booking->code ?? '#' . $booking->id }}">
-                                                <i class="fa fa-barcode"></i> {{ __('Edit PNR/Source') }}
-                                            </a>
+                                            @if(auth()->user()->hasPermission('booking_pnr_edit'))
+                                                <a class="dropdown-item btn-pnr-edit" href="#"
+                                                data-id="{{ $booking->id }}"
+                                                data-pnr="{{ $booking->pnr_id }}"
+                                                data-source="{{ $booking->source }}"
+                                                data-status="{{ $booking->status }}"
+                                                data-code="{{ $booking->code ?? '#' . $booking->id }}">
+                                                    <i class="fa fa-barcode"></i> {{ __('Edit PNR/Source') }}
+                                                </a>
+                                            @endif
+
+                                            {{-- Set Paid --}}
+                                            @if(auth()->user()->hasPermission('booking_setpaid'))
+                                                <a class="dropdown-item" href="#" data-toggle="modal"
+                                                   data-target="#modal-paid-{{ $booking->id }}">
+                                                    <i class="fa fa-money text-success"></i> {{ __('Set Paid') }}
+                                                </a>
+                                            @endif
+
+                                            {{-- PNR Check --}}
+                                            @if(auth()->user()->hasPermission('booking_pnr_check'))
+                                                <a class="dropdown-item"
+                                                   href="{{ route('admin.booking.pnrcheck', ['id'=>$booking->id]) }}">
+                                                    <i class="fa fa-search"></i> {{ __('PNR Check') }}
+                                                </a>
+                                            @endif
 
                                             <div class="dropdown-divider"></div>
 
                                             {{-- Cancel Booking --}}
-                                            <a class="dropdown-item text-danger btn-booking-cancel" href="#"
-                                               data-id="{{ $booking->id }}"
-                                               data-code="{{ $booking->code ?? '#' . $booking->id }}"
-                                               data-url="{{ route('booking.cancel', $booking->id) }}">
-                                                <i class="fa fa-ban"></i> {{ __('Cancel Booking') }}
-                                            </a>
+                                            @if(auth()->user()->hasPermission('booking_cancel'))
+                                                <a class="dropdown-item text-danger btn-booking-cancel" href="#"
+                                                data-id="{{ $booking->id }}"
+                                                data-code="{{ $booking->code ?? '#' . $booking->id }}"
+                                                data-url="{{ route('booking.cancel', $booking->id) }}">
+                                                    <i class="fa fa-ban"></i> {{ __('Cancel Booking') }}
+                                                </a>
+                                            @endif
 
                                         </div>
                                     </div>
                                 </td>
                             </tr>
+
+                            {{-- Set Paid Modal --}}
+                            <div class="modal fade" id="modal-paid-{{ $booking->id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header bg-primary text-white py-2">
+                                            <h6 class="modal-title"><i class="fa fa-money"></i> {{ __('Set Paid') }} — {{ $booking->code ?? '#'.$booking->id }}</h6>
+                                            <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="row g-2 mb-3">
+                                                <div class="col-4">
+                                                    <div class="border rounded p-2 text-center">
+                                                        <div class="text-muted small">Total</div>
+                                                        <div class="fw-bold">{{ format_money_main($booking->total) }}</div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-4">
+                                                    <div class="border rounded p-2 text-center bg-success bg-opacity-10">
+                                                        <div class="text-muted small">Paid</div>
+                                                        <div class="fw-bold text-success">{{ format_money_main($booking->paid) }}</div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-4">
+                                                    <div class="border rounded p-2 text-center bg-danger bg-opacity-10">
+                                                        <div class="text-muted small">Due</div>
+                                                        <div class="fw-bold text-danger">{{ format_money_main($booking->total - $booking->paid) }}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="alert alert-{{ $booking->user && $booking->user->credit_balance > 0 ? 'success' : 'danger' }} py-2 mb-3">
+                                                <i class="fa fa-wallet"></i>
+                                                <strong>Credit Balance:</strong>
+                                                {{ $booking->user ? format_money_main($booking->user->credit_balance) : '৳0.00' }}
+                                            </div>
+                                            <div class="form-group mb-0">
+                                                <label class="small fw-semibold">Amount to Add <span class="text-danger">*</span></label>
+                                                <input type="number" class="form-control"
+                                                       id="set_paid_input_{{ $booking->id }}"
+                                                       min="0" step="0.01"
+                                                       value="{{ $booking->total - $booking->paid }}">
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer py-2">
+                                            <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                                            <button type="button" class="btn btn-primary btn-sm btn-set-paid" data-id="{{ $booking->id }}">
+                                                <i class="fa fa-check"></i> Save Payment
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         @empty
                             <tr>
                                 <td colspan="14" class="text-center py-4">
@@ -443,6 +521,28 @@ $(document).ready(function() {
         $('#dup_booking_id').val($(this).data('id'));
         $('#dup-code').text($(this).data('code'));
         $('#modal_duplicate').modal('show');
+    });
+
+    // ── Set Paid ──
+    $(document).on('click', '.btn-set-paid', function () {
+        var btn = $(this), id = btn.data('id');
+        var amount = parseFloat($('#set_paid_input_' + id).val());
+        if (!amount || amount <= 0) { alert('Enter a valid amount'); return; }
+        if (!confirm('Add payment of ৳' + amount.toFixed(2) + '?')) return;
+        btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
+        $.ajax({
+            url: '/admin/module/booking/bookings/' + id + '/set-paid',
+            method: 'POST',
+            data: { remain: amount, _token: '{{ csrf_token() }}' },
+            dataType: 'json',
+            success: function(res) {
+                if (res.status || res.success) { alert('✅ ' + res.message); location.reload(); }
+                else { alert('❌ ' + (res.message || 'Failed')); btn.prop('disabled',false).html('<i class="fa fa-check"></i> Save'); }
+            },
+            error: function(xhr) {
+                alert('❌ ' + (xhr.responseJSON?.message || 'Error')); btn.prop('disabled',false).html('<i class="fa fa-check"></i> Save');
+            }
+        });
     });
 
     $('#btn-confirm-duplicate').on('click', function() {

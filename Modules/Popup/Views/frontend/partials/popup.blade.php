@@ -54,8 +54,12 @@
                         
                         {{-- Video File Media --}}
                         @elseif($popup->media === 'video' && $popup->media_url)
-                            <video controls 
-                                   style="width:100%;height:auto;display:block;max-height:400px;">
+                            <video id="popupVideo"
+                                controls
+                                autoplay
+                                muted
+                                playsinline
+                                style="width:100%;height:auto;display:block;max-height:400px;">
                                 <source src="{{ $popup->media_url }}" type="video/mp4">
                                 Your browser does not support the video tag.
                             </video>

@@ -18,49 +18,70 @@ class WalletController extends AdminController
 
     public function creditList(Request $request, $user_id = '')
     {
-        $user  = User::findOrFail($user_id);
+        $user = User::findOrFail($user_id);
 
-        $dateFrom = $request->input('date_from', date('Y-m-d'));
-        $dateTo   = $request->input('date_to',   date('Y-m-d'));
+        $dateFrom = $request->date_from;
+        $dateTo   = $request->date_to;
+
+        // Base query
+        $query = Transaction::where('user_id', $user_id)
+            ->with(['author', 'creator', 'updater']);
+
+        // Apply date filter ONLY if dates exist
+        if ($dateFrom && $dateTo) {
+            $query->whereDate('created_at', '>=', $dateFrom)
+                ->whereDate('created_at', '<=', $dateTo);
+        }
+
+        // Other filters
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        $rows = $query->orderBy('id', 'DESC')->get();
 
         // Opening Balance
-        $openingReceived = Transaction::whereIn('type', ['deposit', 'topup'])
-            ->whereIn('status', ['confirmed', 'completed'])
-            ->whereDate('created_at', '<', $dateFrom)
-            ->sum('amount');
+        $openingReceived = 0;
+        $openingPaid = 0;
+        $openingBalance = 0;
 
-        $openingPaid = Transaction::where(function($q) {
-            $q->whereIn('type', ['withdraw', 'debit', 'payment', 'credit'])
-                ->orWhereIn('status', ['refund', 'void', 'voided', 'refunded']);
-        })
-            ->whereDate('created_at', '<', $dateFrom)
-            ->sum('amount');
+        if ($dateFrom) {
 
-        $openingBalance = $openingReceived - $openingPaid;
+            $openingReceived = Transaction::whereIn('type', ['deposit', 'topup'])
+                ->whereIn('status', ['confirmed', 'completed'])
+                ->whereDate('created_at', '<', $dateFrom)
+                ->sum('amount');
 
-        // Filtered rows
-        $query = Transaction::where('user_id', $user_id)
-            ->with(['author', 'creator', 'updater'])
-            ->whereDate('created_at', '>=', $dateFrom)
-            ->whereDate('created_at', '<=', $dateTo)
-            ->orderBy('id', 'DESC');
+            $openingPaid = Transaction::where(function($q) {
+                    $q->whereIn('type', ['withdraw', 'debit', 'payment', 'credit'])
+                    ->orWhereIn('status', ['refund', 'void', 'voided', 'refunded']);
+                })
+                ->whereDate('created_at', '<', $dateFrom)
+                ->sum('amount');
 
-        if ($request->filled('status')) $query->where('status', $request->status);
-        if ($request->filled('type'))   $query->where('type',   $request->type);
-
-        $rows = $query->get();
+            $openingBalance = $openingReceived - $openingPaid;
+        }
 
         // Stats
         $depositConfirmedCount   = $rows->where('type', 'deposit')->where('status', 'confirmed')->count();
         $depositConfirmedAmount  = $rows->where('type', 'deposit')->where('status', 'confirmed')->sum('amount');
+
         $depositPendingCount     = $rows->where('type', 'deposit')->where('status', 'pending')->count();
         $depositPendingAmount    = $rows->where('type', 'deposit')->where('status', 'pending')->sum('amount');
+
         $withdrawConfirmedCount  = $rows->where('type', 'withdraw')->where('status', 'confirmed')->count();
         $withdrawConfirmedAmount = $rows->where('type', 'withdraw')->where('status', 'confirmed')->sum('amount');
+
         $withdrawPendingCount    = $rows->where('type', 'withdraw')->where('status', 'pending')->count();
         $withdrawPendingAmount   = $rows->where('type', 'withdraw')->where('status', 'pending')->sum('amount');
+
         $paymentCount  = $rows->where('type', 'debit')->where('status', 'payment')->count();
         $paymentAmount = $rows->where('type', 'debit')->where('status', 'payment')->sum('amount');
+
         $refundCount   = $rows->where('type', 'credit')->count();
         $refundAmount  = $rows->where('type', 'credit')->sum('amount');
 
@@ -78,17 +99,19 @@ class WalletController extends AdminController
         $closingBalance = $openingBalance + $periodReceived - $periodPaid;
 
         $statuses = Transaction::where('user_id', $user_id)
-            ->whereNotNull('status')->distinct()->pluck('status');
+            ->whereNotNull('status')
+            ->distinct()
+            ->pluck('status');
 
         return view("User::admin.wallet.credit_list", compact(
             'rows', 'user', 'statuses', 'dateFrom', 'dateTo',
             'openingBalance', 'periodReceived', 'periodPaid', 'closingBalance',
             'depositConfirmedCount', 'depositConfirmedAmount',
-            'depositPendingCount',   'depositPendingAmount',
+            'depositPendingCount', 'depositPendingAmount',
             'withdrawConfirmedCount', 'withdrawConfirmedAmount',
-            'withdrawPendingCount',   'withdrawPendingAmount',
+            'withdrawPendingCount', 'withdrawPendingAmount',
             'paymentCount', 'paymentAmount',
-            'refundCount',  'refundAmount'
+            'refundCount', 'refundAmount'
         ));
     }
 

@@ -717,9 +717,21 @@ export default {
     font-size: 13px;
     font-weight: 600;
     outline: none;
-    background: var(--fl-bg);
+    background: red;
+    color: white;
     cursor: pointer;
-    color: #111827;
+}
+
+/* Dropdown items */
+.fl-sort-select select option {
+    background: #fff;
+    color: #000;
+}
+
+/* Selected dropdown item */
+.fl-sort-select select option:checked {
+    background: red;
+    color: #fff;
 }
 
 /* Chips */

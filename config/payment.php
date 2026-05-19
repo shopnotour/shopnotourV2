@@ -24,7 +24,7 @@ return [
             'bg'     => '#fff0f7',
             'color'  => '#db2777',
             'border' => '#fbcfe8',
-            'sub'    => 'Payment / 0.2% charge',
+            'sub'    => 'Payment / 1.2% charge',
         ],
         //        [
         //            'id'     => 'nagad',

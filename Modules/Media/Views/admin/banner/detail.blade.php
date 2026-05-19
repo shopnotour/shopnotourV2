@@ -8,7 +8,7 @@
             <div class="d-flex justify-content-between mb20">
                 <div>
                     <h1 class="title-bar">
-                        {{ $row->id ? detail.blade.php__('Edit Banner: ').$row->title : __('Add new Banner') }}
+                        {{ $row->id ? __('Edit Banner: ').$row->title : __('Add new Banner') }}
                     </h1>
                 </div>
             </div>

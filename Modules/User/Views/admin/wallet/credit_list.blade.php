@@ -175,7 +175,13 @@
             <div class="bal-item">
                 <div class="bal-label"><i class="fa fa-calendar-o"></i> Period</div>
                 <div class="bal-value neutral" style="font-size:13px;">
-                    {{ \Carbon\Carbon::parse($dateFrom)->format('d M Y') }} — {{ \Carbon\Carbon::parse($dateTo)->format('d M Y') }}
+                    @if($dateFrom && $dateTo)
+                        {{ \Carbon\Carbon::parse($dateFrom)->format('d M Y') }}
+                        —
+                        {{ \Carbon\Carbon::parse($dateTo)->format('d M Y') }}
+                    @else
+                        All Time
+                    @endif
                 </div>
                 <div class="bal-sub">Filtered range</div>
             </div>
@@ -184,7 +190,9 @@
                 <div class="bal-value {{ $openingBalance >= 0 ? 'positive' : 'negative' }}">
                     ৳{{ number_format($openingBalance, 0) }}
                 </div>
-                <div class="bal-sub">Before {{ \Carbon\Carbon::parse($dateFrom)->format('d M Y') }}</div>
+                <div class="bal-sub">
+                    {{ $dateFrom ? 'Before '.\Carbon\Carbon::parse($dateFrom)->format('d M Y') : 'All Records' }}
+                </div>
             </div>
             <div class="bal-item">
                 <div class="bal-label"><i class="fa fa-arrow-down"></i> Total Received</div>

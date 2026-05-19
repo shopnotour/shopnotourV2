@@ -83,7 +83,7 @@
 
             {{-- Overlay --}}
             <div class="absolute inset-0 z-10 pointer-events-none
-                        bg-gradient-to-br from-slate-900/65 via-blue-900/55 to-blue-800/50"></div>
+                bg-gradient-to-br from-slate-900/30 via-blue-900/20 to-blue-800/20"></div>
 
             {{-- Content --}}
             <div class="relative z-20 h-full flex flex-col items-center justify-center px-4">

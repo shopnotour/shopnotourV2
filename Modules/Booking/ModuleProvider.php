@@ -81,6 +81,17 @@ class ModuleProvider extends ModuleServiceProvider
             'user_transactions_view',
             'user_tickets_view',
             'user_password_change',
+
+            'all_booking_menu',
+            'all_booking_issue_request',
+            'all_booking_booked',
+            'all_booking_cancelled',
+            'all_booking_issued',
+            'all_booking_pending',
+            'all_booking_paid',
+            'all_booking_ticketed',
+            'all_booking_refunded',
+            'all_booking_failed',
             'user_validation',  //modify by rahat
             'user_vendor_approved',  //modify by rahat
             'user_all',  //modify by rahat

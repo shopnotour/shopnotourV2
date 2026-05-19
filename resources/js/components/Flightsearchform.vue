@@ -712,36 +712,30 @@ export default {
         selectDay(d) {
             const dateStr = `${this.pickerYear}-${String(this.pickerMonth + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
             const t = this.pickerTarget;
+
             if (!t) return;
 
             if (t.type === 'return') {
+
                 this.returnDate = dateStr;
+
             } else {
-                this.$set(this.segments, t.idx, { ...this.segments[t.idx], departure: dateStr });
-                // পরের segment minDate update
-                const nk = t.idx + 1;
-                if (this.segments[nk]) {
-                    const nextDep = this.segments[nk].departure;
-                    if (nextDep && nextDep < dateStr) {
-                        this.$set(this.segments, nk, { ...this.segments[nk], departure: '' });
-                    }
-                }
-                // round trip: return auto-set to next day
-                // if (t.idx === 0 && this.tripType === 'round') {
-                //     const d2 = new Date(dateStr);
-                //     d2.setDate(d2.getDate() + 1);
-                //     this.returnDate = d2.toISOString().split('T')[0];
-                // }
+
+                this.$set(this.segments, t.idx, {
+                    ...this.segments[t.idx],
+                    departure: dateStr
+                });
 
                 if (t.idx === 0 && this.tripType === 'round') {
+
                     const depDate = new Date(dateStr);
 
-                    // only adjust if return date empty or invalid
                     if (
                         !this.returnDate ||
                         new Date(this.returnDate) <= depDate
                     ) {
                         const d2 = new Date(depDate);
+
                         d2.setDate(d2.getDate() + 1);
 
                         this.returnDate = d2
@@ -750,7 +744,32 @@ export default {
                     }
                 }
             }
-            this.closePicker();
+
+            // ✅ AUTO OPEN RETURN DATE
+            if (
+                t.type === 'departure' &&
+                t.idx === 0 &&
+                this.tripType === 'round'
+            ) {
+
+                this.pickerTarget = {
+                    idx: -1,
+                    type: 'return'
+                };
+
+                if (this.returnDate) {
+                    const ret = new Date(this.returnDate);
+
+                    this.pickerYear = ret.getFullYear();
+                    this.pickerMonth = ret.getMonth();
+                }
+
+                this.pickerOpen = true;
+
+            } else {
+
+                this.closePicker();
+            }
         },
 
         selectToday() {
@@ -865,12 +884,41 @@ export default {
 
         selectAirport(i, field, airport) {
             this.isSelectingAirport = true;
-            const s   = this.segments[i];
-            const dn  = `${airport.code} - ${airport.name}`;
-            if (field === 'from') { s.from_display = dn; s.from_search = ''; s.from_id = airport.id; this.saveRecent('from', airport); }
-            else                  { s.to_display   = dn; s.to_search   = ''; s.to_id   = airport.id; this.saveRecent('to',   airport); }
+
+            const s  = this.segments[i];
+            const dn = `${airport.code} - ${airport.name}`;
+
+            if (field === 'from') {
+                s.from_display = dn;
+                s.from_search  = '';
+                s.from_id      = airport.id;
+
+                this.saveRecent('from', airport);
+
+                // ✅ Auto focus TO input after FROM selected
+                this.$nextTick(() => {
+                    this.focusField('to', i);
+                });
+
+            } else {
+
+                s.to_display = dn;
+                s.to_search  = '';
+                s.to_id      = airport.id;
+
+                this.saveRecent('to', airport);
+
+                // ✅ Automatically open departure calendar
+                this.$nextTick(() => {
+                    this.openPicker(i, 'departure');
+                });
+            }
+
             this.activeSearch = null;
-            setTimeout(() => { this.isSelectingAirport = false; }, 100);
+
+            setTimeout(() => {
+                this.isSelectingAirport = false;
+            }, 100);
         },
 
         saveRecent(type, airport) {
@@ -1114,7 +1162,7 @@ export default {
     --fsf-border:   #e2e8f0;
     --fsf-primary:  #0057ff;
     --fsf-primary2: #003fcc;
-    --fsf-accent:   #f59e0b;
+    --fsf-accent:   #03c5ff;
     --fsf-text:     #0f172a;
     --fsf-muted:    #64748b;
     --fsf-light:    #f8fafc;
@@ -1596,7 +1644,7 @@ export default {
     white-space: nowrap;
 }
 .fsf-search-btn:hover:not(:disabled) {
-    background: #d97706;
+    background: #1e9cd6;
     box-shadow: 0 6px 20px rgba(245,158,11,.4);
     transform: translateY(-1px);
 }

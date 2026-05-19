@@ -22,6 +22,11 @@ class Ticket extends BaseModel
 
     function getEditUrl()
     {
+        //start
+        if (request()->is('admin/*') || request()->routeIs('support.admin.*')) {
+            return route('support.admin.ticket.detail', ['id' => $this->id]);
+        }
+        //end
         return route('support.ticket.detail', ['id' => $this->id]);
     }
 

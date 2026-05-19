@@ -318,7 +318,7 @@
                                 <span class="count-badge">{{ number_format($searchCount) }}</span>
                             </td>
                             <td style="text-align:center;">
-                                <a href="{{ route('admin.marketing.search.sessions') }}" class="btn-detail">
+                                <a href="{{ route('admin.marketing.search.sessions', ['date_from' => $dateFrom, 'date_to' => $dateTo]) }}" class="btn-detail"> {{-- modify this line --}}
                                     <i class="fa fa-eye"></i> Details
                                 </a>
                             </td>
@@ -336,7 +336,7 @@
                                 <span class="count-badge">{{ number_format($priceCheckedCount) }}</span>
                             </td>
                             <td style="text-align:center;">
-                                <a href="{{ route('admin.marketing.select.sessions') }}" class="btn-detail">
+                                <a href="{{ route('admin.marketing.select.sessions', ['date_from' => $dateFrom, 'date_to' => $dateTo]) }}" class="btn-detail"> {{-- modify this line --}}
                                     <i class="fa fa-eye"></i> Details
                                 </a>
                             </td>

@@ -55,11 +55,18 @@ class Ticket extends BaseModel
         if (!empty($filters['catId'])) {
             $query->whereCatId($filters['catId']);
         }
-        if (!empty($filters['customerId'])) {
-            $query->whereCustomerId($filters['customerId']);
-        }
-        if (!empty($filters['agentId'])) {
-            $query->whereAgentId($filters['agentId']);
+        if (!empty($filters['customerId']) && !empty($filters['agentId'])) {
+            $query->where(function ($q) use ($filters) {
+                $q->where('customer_id', $filters['customerId'])
+                  ->orWhere('agent_id', $filters['agentId']);
+            });
+        } else {
+            if (!empty($filters['customerId'])) {
+                $query->whereCustomerId($filters['customerId']);
+            }
+            if (!empty($filters['agentId'])) {
+                $query->whereAgentId($filters['agentId']);
+            }
         }
         return $query;
     }

@@ -49,8 +49,9 @@
                 <div class="brand-item">
                     <span class="brand-label">{{ __('Authorised By') }}</span>
 
-                    <img src="https://tripfindy-public.s3.ap-southeast-1.amazonaws.com/event/iata.svg"
-                        alt="Authorised By" class="brand-logo">
+                    <img src="{{ asset('images/icons/png/iata-logo-black-and-white.png') }}"
+                        alt="Authorised By"
+                        class="brand-logo">
                 </div>
 
                 {{-- BASIS --}}
@@ -178,11 +179,11 @@
     .footer-logo-text {
         font-size: 30px;
         font-weight: 700;
-        color: white;
+        color: rgb(0, 0, 0);
     }
 
     .footer-brand-text {
-        color: rgba(255, 255, 255, .92);
+        color: rgba(0, 0, 0, 0.92);
         font-size: 17px;
         line-height: 1.8;
         font-weight: 400;
@@ -190,7 +191,7 @@
     }
 
     .footer-brand-text strong {
-        color: white;
+        color: rgb(0, 0, 0);
         font-weight: 700;
     }
 
@@ -202,7 +203,7 @@
         top: 0;
         bottom: 0;
         width: 1px;
-        background: rgba(255, 255, 255, .30);
+        background: rgba(0, 0, 0, 0.3);
         transform: translateX(-50%);
     }
 
@@ -224,7 +225,7 @@
 
     .brand-label {
         display: block;
-        color: white;
+        color: rgb(0, 0, 0);
         font-size: 15px;
         font-weight: 600;
         margin-bottom: 14px;
@@ -245,7 +246,7 @@
     /* ================= BOTTOM AREA ================= */
 
     .footer-bottom-area {
-        border-top: 1px solid rgba(255, 255, 255, .08);
+        border-top: 1px solid rgba(0, 0, 0, 0.08);
         padding: 30px 20px;
         text-align: center;
     }
@@ -287,14 +288,14 @@
 
     .footer-links a,
     .footer-links span {
-        color: rgba(255, 255, 255, .82);
+        color: rgba(0, 0, 0, 0.82);
         font-size: 15px;
         text-decoration: none;
         transition: .2s ease;
     }
 
     .footer-links a:hover {
-        color: white;
+        color: rgb(0, 0, 0);
     }
 
     /* ================= COMPANY ================= */
@@ -316,7 +317,7 @@
         align-items: center;
         gap: 8px;
 
-        color: white;
+        color: rgb(0, 0, 0);
         text-decoration: none;
         font-weight: 700;
     }
@@ -330,7 +331,7 @@
     /* ================= COPYRIGHT ================= */
 
     .footer-copyright {
-        color: rgba(255, 255, 255, .65);
+        color: rgba(0, 0, 0, 0.65);
         font-size: 14px !important;
         ;
     }

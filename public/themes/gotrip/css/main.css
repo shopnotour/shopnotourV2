@@ -3315,17 +3315,17 @@ h6 {
 }
 
 .accordion.-simple
-.accordion__item.is-active
-.accordion__icon
-> *:nth-child(1) {
+    .accordion__item.is-active
+    .accordion__icon
+    > *:nth-child(1) {
     transform: rotate(90deg);
     opacity: 0;
 }
 
 .accordion.-simple
-.accordion__item.is-active
-.accordion__icon
-> *:nth-child(2) {
+    .accordion__item.is-active
+    .accordion__icon
+    > *:nth-child(2) {
     transform: none;
     opacity: 1;
 }
@@ -3380,17 +3380,17 @@ h6 {
 }
 
 .accordion.-db-sidebar
-.accordion__item.is-active
-.accordion__icon
-> *:nth-child(1) {
+    .accordion__item.is-active
+    .accordion__icon
+    > *:nth-child(1) {
     transform: rotate(90deg);
     opacity: 0;
 }
 
 .accordion.-db-sidebar
-.accordion__item.is-active
-.accordion__icon
-> *:nth-child(2) {
+    .accordion__item.is-active
+    .accordion__icon
+    > *:nth-child(2) {
     transform: none;
     opacity: 1;
 }
@@ -3462,7 +3462,7 @@ h6 {
 }
 
 .header .header-logo img {
-    width: 140px;
+    width: 100px;
 }
 
 @media (max-width: 767px) {
@@ -3489,7 +3489,7 @@ h6 {
 .header.-type-2 {
     margin-top: 20px;
     transition: background-color 0.4s cubic-bezier(0.165, 0.84, 0.44, 1),
-    margin 0.1s cubic-bezier(0.165, 0.84, 0.44, 1);
+        margin 0.1s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
 @media (max-width: 1199px) {
@@ -9556,6 +9556,9 @@ div[data-slider] > input[type="range"]::-ms-tooltip {
 .bg-white {
     background-color: var(--color-white) !important;
 }
+.bg-f3f6ff {
+    background-color: #f3f6ff !important;
+}
 
 .bg-black {
     background-color: var(--color-black) !important;
@@ -12175,8 +12178,8 @@ table.table-5 td {
     font-weight: 600;
 }
 .footer {
-    background-color: #3560bc;
-    color: #fff;
+    background-color: #f3f6ff;
+    color: #000000;
 }
 
 @media (min-width: 1200px) {

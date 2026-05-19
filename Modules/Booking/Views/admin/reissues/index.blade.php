@@ -306,6 +306,8 @@
                 'completed'             => 'success',
                 'rejected'              => 'danger',
             ];
+            $statusColor   = $statusColors[$reissue->status] ?? 'secondary';
+            $statusLabel   = ucfirst(str_replace('_', ' ', $reissue->status));
             $customer      = $reissue->booking->user ?? null;
             $walletBalance = $customer ? ($customer->credit_balance ?? 0) : 0;
             $totalAmount   = $reissue->total_amount ?? 0;
@@ -1037,10 +1039,11 @@
                 var fareDiff   = totalNew - totalOld;
                 var totalExtra = fareDiff + totalCharges + totalService; // customer কে মোট extra দিতে হবে
                 var grandTotal = totalExtra; // grand total = extra amount
+                //
+                // var oldPaid      = parseFloat($('.btn-set-amount-reissue[data-id="' + reissueId + '"]').data('old-paid')) || 0;
+                // var customerPays = totalExtra - oldPaid; // positive = pay, negative = refund, zero = even
 
-                var oldPaid      = parseFloat($('.btn-set-amount-reissue[data-id="' + reissueId + '"]').data('old-paid')) || 0;
-                var customerPays = totalExtra - oldPaid; // positive = pay, negative = refund, zero = even
-
+                var customerPays = totalExtra;
                 // Table footer update
                 $('#total_old_fare_set_'       + reissueId).text('BDT ' + totalOld.toFixed(2));
                 $('#total_new_fare_set_'       + reissueId).text('BDT ' + totalNew.toFixed(2));
@@ -1126,8 +1129,8 @@
                 // মূল fix: extra amount দিয়ে confirm message
                 var fareDiff    = totalNew - totalOld;
                 var totalExtra  = fareDiff + totalCharges + totalService;
-                var customerPays = totalExtra - oldPaid;
-
+                // var customerPays = totalExtra - oldPaid;
+                var customerPays = totalExtra;
                 var paymentLine;
                 if (customerPays > 0.009) {
                     paymentLine = 'Customer will PAY extra: BDT ' + customerPays.toFixed(2);

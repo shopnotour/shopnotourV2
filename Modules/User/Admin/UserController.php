@@ -451,17 +451,184 @@ class UserController extends AdminController
         }
         return redirect()->back()->with('success', __('Updated successfully!'));
     }
+
     public function userUpgradeRequest(Request $request)
     {
         $this->checkPermission('user_view');
-        $listUser = VendorRequest::query();
-        $data = [
-            'rows' => $listUser->whereHas('user')->with(['user','role','approvedBy'])->orderBy('id','desc')->paginate(20),
-            'roles' => Role::all(),
 
-        ];
-        return view('User::admin.upgrade-user', $data);
+        if ($request->has('draw')) {
+
+            $search = $request->input('search.value', '');
+            $start  = (int) $request->input('start', 0);
+            $length = (int) $request->input('length', 20);
+
+            $query = VendorRequest::query()
+                ->whereHas('user')
+                ->with(['user', 'role', 'approvedBy']);
+
+            if (!empty($search)) {
+                $query->where(function ($q) use ($search) {
+                    $q->whereHas('user', function ($uq) use ($search) {
+                        $uq->where('first_name', 'LIKE', '%' . $search . '%')
+                            ->orWhere('last_name',  'LIKE', '%' . $search . '%')
+                            ->orWhere('email',      'LIKE', '%' . $search . '%')
+                            ->orWhereRaw("CONCAT(first_name,' ',last_name) LIKE ?", ['%'.$search.'%']);
+                    })
+                        ->orWhereHas('role', function ($rq) use ($search) {
+                            $rq->where('name', 'LIKE', '%' . $search . '%');
+                        })
+                        ->orWhere('status', 'LIKE', '%' . $search . '%');
+                });
+            }
+
+            $total    = VendorRequest::whereHas('user')->count();
+            $filtered = $query->count();
+
+            $rows = $query->orderBy('id', 'desc')
+                ->skip($start)
+                ->take($length)
+                ->get();
+
+            $data = $rows->map(function ($row) {
+                // Approve button
+                $approveBtn = '';
+                if ($row->status !== 'approved') {
+                    $approveBtn .= '<a class="btn btn-sm btn-info approve-user"
+                        data-id="' . $row->id . '"
+                        href="#">' . __('Approve') . '</a> ';
+                }
+
+// Cancel/Delete button
+                $cancelUrl     = route('user.admin.upgradeCancel', ['id' => $row->id]);
+                $cancelLabel   = $row->status === 'approved' ? __('Cancel') : __('Delete');
+                $cancelConfirm = $row->status === 'approved'
+                    ? __('This will reset user role to customer and deduct bonus balance. Are you sure?')
+                    : __('Are you sure you want to delete this request?');
+
+                $approveBtn .= ' <a class="btn btn-sm btn-danger cancel-request"
+                    href="' . $cancelUrl . '"
+                    data-confirm="' . e($cancelConfirm) . '">'
+                        . $cancelLabel . '</a>';
+
+                return [
+                    'checkbox'      => '<input type="checkbox" name="ids[]" value="' . $row->id . '" class="check-item">',
+                    'name'          => '<a href="' . route('user.admin.details', ['id' => optional($row->user)->id]) . '">'
+                        . e(optional($row->user)->getDisplayName()) . '</a>',
+                    'email'         => e(optional($row->user)->email ?? ''),
+                    'role'          => e($row->role ? ucfirst($row->role->name) : ''),
+                    'created_at'    => display_date($row->created_at),
+                    'approved_time' => $row->approved_time ? display_date($row->approved_time) : '',
+                    'approved_by'   => e(optional($row->approvedBy)->getDisplayName() ?? ''),
+                    'status'        => '<span class="badge badge-' . $row->status . '">' . $row->status . '</span>',
+                    'actions'       => $approveBtn,
+                ];
+            });
+
+            return response()->json([
+                'draw'            => (int) $request->input('draw'),
+                'recordsTotal'    => $total,
+                'recordsFiltered' => $filtered,
+                'data'            => $data,
+            ]);
+        }
+
+        return view('User::admin.upgrade-user', [
+            'roles' => Role::all(),
+            'rows'  => collect(),
+        ]);
     }
+
+    public function userUpgradeRequestCancel(Request $request, $id)
+    {
+        $this->checkPermission('user_create');
+
+        $vendorRequest = VendorRequest::find($id);
+
+        if (empty($vendorRequest)) {
+            return redirect()->back()->with('error', __('Request not found!'));
+        }
+
+        if ($vendorRequest->status === 'approved') {
+
+            $user = User::find($vendorRequest->user_id);
+
+            if (!empty($user)) {
+                $customerRole = Role::where('name', 'customer')->first();
+
+                if (!empty($customerRole)) {
+                    $user->assignRole($customerRole->name);
+
+                    $approvalTx = DB::table('credit_transactions')
+                        ->where('user_id',   $user->id)
+                        ->where('reference', 'vendor_approval_bonus')
+                        ->where('type',      'deposit')
+                        ->orderBy('id', 'desc')
+                        ->first();
+
+                    if (!empty($approvalTx) && (float)$approvalTx->amount > 0) {
+
+                        $deduct      = (float) $approvalTx->amount;
+                        $beforeBonus = (float) $user->bonus_balance;
+                        $afterBonus  = max(0, $beforeBonus - $deduct);
+
+                        DB::table('users')
+                            ->where('id', $user->id)
+                            ->update(['bonus_balance' => $afterBonus]);
+
+                        DB::table('credit_transactions')->insert([
+                            'user_id'          => $user->id,
+                            'booking_id'       => null,
+                            'ref_id'           => null,
+                            'type'             => 'withdrawal',
+                            'amount'           => $deduct,
+                            'meta'             => json_encode([
+                                'balance_before'       => $beforeBonus,
+                                'balance_after'        => $afterBonus,
+                                'reason'               => 'Vendor approval cancelled by admin',
+                                'cancelled_by'         => Auth::id(),
+                                'original_transaction' => $approvalTx->id,
+                            ]),
+                            'status'           => 'confirmed',
+                            'create_user'      => Auth::id(),
+                            'update_user'      => Auth::id(),
+                            'reference'        => 'vendor_cancel_bonus_deduct',
+                            'transaction_type' => 'bonus',
+                            'remarks'          => 'Bonus deducted: vendor approval cancelled',
+                            'created_at'       => now(),
+                            'updated_at'       => now(),
+                        ]);
+                    }
+                }
+            }
+
+            $vendorRequest->status      = 'cancelled';
+            $vendorRequest->update_user = Auth::id();
+            $vendorRequest->save();
+
+            return redirect()->back()->with('success', __('Vendor request cancelled, role reset to customer and bonus deducted!'));
+
+        } elseif (in_array($vendorRequest->status, ['pending', 'cancelled'])) {
+
+            $vendorRequest->update_user = Auth::id();
+            $vendorRequest->save();
+            $vendorRequest->forceDelete();
+
+            return redirect()->back()->with('success', __('Request deleted successfully!'));
+        }
+
+        return redirect()->back()->with('error', __('Invalid status!'));
+    }
+//    public function userUpgradeRequest(Request $request)
+//    {
+//        $this->checkPermission('user_view');
+//        $listUser = VendorRequest::query();
+//        $data = [
+//            'rows' => $listUser->whereHas('user')->with(['user','role','approvedBy'])->orderBy('id','desc')->paginate(20),
+//            'roles' => Role::all(),
+//
+//        ];
+//        return view('User::admin.upgrade-user', $data);
+//    }
 //    public function userUpgradeRequestApproved(Request $request)
 //    {
 //        $this->checkPermission('user_create');
@@ -742,6 +909,33 @@ class UserController extends AdminController
         ]);
     }
 
+//    public function update(Request $request, $id)
+//    {
+//        $row = User::find($id);
+//        if (empty($row)) {
+//            return redirect(route('user.admin.index'));
+//        }
+//        if ($row->id != Auth::user()->id and !Auth::user()->hasPermission('user_update')) {
+//            abort(403);
+//        }
+//        $data = [
+//            'row'   => $row,
+//            'roles' => Role::all(),
+//            // 'breadcrumbs'=>[
+//            //     [
+//            //         'name'=>__("Users"),
+//            //         'url'=>route('user.admin.index')
+//            //     ],
+//            //     [
+//            //         'name'=>__("Edit User: #:id",['id'=>$row->id]),
+//            //         'class' => 'active'
+//            //     ],
+//            // ]
+//        ];
+//        return view('User::admin.approved_details', $data);
+//    }
+
+
     public function update(Request $request, $id)
     {
         $row = User::find($id);
@@ -751,22 +945,16 @@ class UserController extends AdminController
         if ($row->id != Auth::user()->id and !Auth::user()->hasPermission('user_update')) {
             abort(403);
         }
+
         $data = [
-            'row'   => $row,
-            'roles' => Role::all(),
-            // 'breadcrumbs'=>[
-            //     [
-            //         'name'=>__("Users"),
-            //         'url'=>route('user.admin.index')
-            //     ],
-            //     [
-            //         'name'=>__("Edit User: #:id",['id'=>$row->id]),
-            //         'class' => 'active'
-            //     ],
-            // ]
+            'row'           => $row,
+            'roles'         => Role::all(),
+            'vendorRequest' => VendorRequest::where('user_id', $row->id)
+                ->orderBy('id', 'desc')  // whereIn বাদ — সব status দেখাবে
+                ->first(),
         ];
+
         return view('User::admin.approved_details', $data);
     }
-
 
 }

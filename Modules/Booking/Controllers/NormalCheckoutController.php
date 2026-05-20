@@ -1705,7 +1705,7 @@ class NormalCheckoutController extends BookingController
 
     private function handleReissue(Request $request, $booking)
     {
-//        return $request;
+    //    return $request;
         try {
             $request->validate([
                 'passenger_ids'   => 'required|array|min:1',
@@ -1772,6 +1772,11 @@ class NormalCheckoutController extends BookingController
 
             // ✅ Airline code
             $airlineCode = $this->getAirlineCodeFromBooking($booking);
+            // ✅ Supplier locator code from pnr_raw_data → store as airline_code
+            $pnrRawData = is_string($booking->pnr_raw_data)
+                ? json_decode($booking->pnr_raw_data, true)
+                : (array)($booking->pnr_raw_data ?? []);
+            $supplierPnr = $pnrRawData['supplier_locator']['supplier_code'] ?? '';
 
             DB::beginTransaction();
 
@@ -1890,6 +1895,7 @@ class NormalCheckoutController extends BookingController
                 'travel_class'  => $originalSearchParams['travel_class'] ?? $booking->seat_class ?? 'ECONOMY',
                 'children_ages' => $childrenAges,
                 'segments'      => $segments,
+                'airline_code'  => $supplierPnr,
             ];
 
             // ✅ Round trip এ return_date
@@ -1924,6 +1930,7 @@ class NormalCheckoutController extends BookingController
                     'reissue_id'     => $reissue->id,
                     'old_booking_id' => $booking->id,
                     'old_pnr'        => $request->pnr_number,
+                    'airline_code'   => $supplierPnr,
                     'passenger_ids'  => $passengerIds,
                     'passengers'     => $passengersData,
                     'search_params'  => $searchParamsForSession,

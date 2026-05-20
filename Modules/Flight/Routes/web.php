@@ -4,6 +4,7 @@ use \Illuminate\Support\Facades\Route;
 Route::group(['prefix'=>config('flight.flight_route_prefix')],function(){
     Route::get('/','FlightController@index')->name('flight.search'); // Search
     Route::post('getData/{id}',"FlightController@getData")->name('flight.getData');
+    Route::get('/airlines',"FlightController@getAirlines")->name('flight.airlines');
 
 
     // ✅ Add these routes

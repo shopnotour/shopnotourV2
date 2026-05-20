@@ -776,9 +776,9 @@ export default {
 
 <style scoped>
 .fc-wrap {
-    --fc-blue: #1d4ed8; --fc-blue2: #1e3a8a; --fc-green: #16a34a; --fc-red: #dc2626;
+    --fc-blue: #1d4ed8; --fc-blue2: #1e3a8a; --fc-green: #16a34a; --fc-red: #DBEAFE;
     --fc-orange: #d97706; --fc-border: #e5e7eb; --fc-bg: #f9fafb; --fc-text: #111827;
-    --fc-muted: #6b7280; --fc-radius: 12px;
+    --fc-muted: #6b7280; --fc-radius: 12px; --fl-accent:   #03c5ff; --fc-purple2: #DBEAFE;
     background: #fff; border-radius: var(--fc-radius); border: 1px solid var(--fc-border);
     box-shadow: 0 1px 4px rgba(0,0,0,.06); margin-bottom: 12px; overflow: hidden;
     font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; color: var(--fc-text);
@@ -825,7 +825,7 @@ export default {
 .fc-fi-fn    { color:var(--fc-blue); border-color:#bfdbfe; background:#eff6ff; font-weight:600; }
 .fc-fi-cabin { color:#4b5563; font-weight:600; }
 .fc-fi-class { opacity:.7; font-weight:400; }
-.fc-fi-seats { color:var(--fc-red); border-color:#fecaca; background:#fef2f2; font-weight:700; }
+.fc-fi-seats { color:var(--fc-blue); border-color:#fecaca; background:#fef2f2; font-weight:700; }
 .fc-layovers { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
 .fc-layover-pill { display:inline-flex; align-items:center; gap:4px; font-size:11px; color:#92400e; background:#fffbeb; border:1px solid #fde68a; border-radius:20px; padding:3px 10px; }
 .fc-overnight { font-weight:700; color:var(--fc-red); }
@@ -851,8 +851,8 @@ export default {
 .fc-total-price { font-size:24px; font-weight:800; color:var(--fc-blue); line-height:1.2; }
 .fc-total-pax   { font-size:10px; color:var(--fc-muted); }
 .fc-btns { display:flex; flex-direction:column; gap:6px; margin-top:10px; }
-.fc-book-btn { width:100%; padding:9px; background:var(--fc-red); color:#fff; border:none; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer; transition:background .2s; }
-.fc-book-btn:hover { background:#b91c1c; }
+.fc-book-btn { width:100%; padding:9px; background:var(--fc-red); color:#000; border: 1px solid #667cb9 ; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer; transition:background .2s; }
+.fc-book-btn:hover { background:#2f63f3; color:#fff; }
 .fc-actions { display:flex; gap:6px; }
 .fc-detail-btn { flex:1; padding:7px; background:#eff6ff; color:var(--fc-blue); border:1px solid #bfdbfe; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; transition:all .2s; display:flex; align-items:center; justify-content:center; gap:4px; }
 .fc-detail-btn:hover { background:var(--fc-blue); color:#fff; }
@@ -868,7 +868,7 @@ export default {
 .fc-ps-sub { font-weight:700; color:var(--fc-text); background:#f8fafc; margin:2px -14px; padding:5px 14px; border-top:1px solid var(--fc-border); border-bottom:1px solid var(--fc-border); }
 .fc-ps-charge { color:#92400e; }
 .fc-ps-total { display:flex; justify-content:space-between; align-items:center; background:#eff6ff; margin:8px -14px 10px; padding:10px 14px; font-size:15px; font-weight:800; color:var(--fc-blue); }
-.fc-ps-book { width:100%; padding:11px; background:var(--fc-red); color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; }
+.fc-ps-book { width:100%; padding:11px; background:var(--fc-red); color:#000; border:none; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; }
 .fc-sheet-enter-active,.fc-sheet-leave-active { transition:all .22s ease; overflow:hidden; }
 .fc-sheet-enter-from,.fc-sheet-leave-to { opacity:0; max-height:0; }
 .fc-sheet-enter-to,.fc-sheet-leave-from { opacity:1; max-height:500px; }

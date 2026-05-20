@@ -511,11 +511,7 @@ export default {
             }
         },
         filteredFlights() {
-            if (!this.selectedAirline) return this.flights;
-            return this.flights.filter(flight => {
-                const airlineCode = flight.airline?.code || flight.segments?.[0]?.airline?.code;
-                return airlineCode === this.selectedAirline;
-            });
+            return this.flights || [];
         },
         totalPages() {
             return Math.ceil(this.sortedFlights.length / this.itemsPerPage);
@@ -556,11 +552,18 @@ export default {
         sortBy() {
             this.currentPage = 1;
         },
+
         selectedAirline() {
             this.currentPage = 1;
         },
+
         flights() {
             this.currentPage = 1;
+        },
+
+        airlineChips() {
+            this.$nextTick(() => this.updateArrows());
+            setTimeout(() => this.updateArrows(), 200);
         }
     },
     methods: {
@@ -639,12 +642,6 @@ export default {
     beforeDestroy() {
         this._ro?.disconnect();
     },
-    watch: {
-        airlineChips() {
-            this.$nextTick(() => this.updateArrows());
-            setTimeout(() => this.updateArrows(), 200);
-        }
-    }
 };
 </script>
 
@@ -729,14 +726,14 @@ export default {
 
 .fl-sort-select i { color: var(--fl-blue); }
 .fl-sort-select select {
-    border: 1.5px solid var(--fl-border);
+    border: 1.5px solid #6580c9;
     border-radius: 8px;
     padding: 6px 10px;
     font-size: 13px;
     font-weight: 600;
     outline: none;
-    background: red;
-    color: white;
+    background: #DBEAFE;
+    color: #000;
     cursor: pointer;
 }
 
@@ -756,8 +753,8 @@ export default {
 
 /* Selected dropdown item */
 .fl-sort-select select option:checked {
-    background: red;
-    color: #fff;
+    background: #DBEAFE;
+    color: #000;
 }
 
 /* Chips */

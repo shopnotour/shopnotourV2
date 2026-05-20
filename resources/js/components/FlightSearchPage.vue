@@ -1163,12 +1163,18 @@ export default {
             }
         }
 
+        // ✅ Check URL for airline_codes parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const airlineCode = urlParams.get('airline_codes');
+        if (airlineCode) {
+            this.filters.airlines = [airlineCode];
+        }
+
         this.$nextTick(() => {
-            // Setup scroll handlers
             window.addEventListener('scroll', this.handleScroll);
             window.addEventListener('resize', this.handleResize);
-
         });
+        
         window.addEventListener('resize', () => {
             if (window.innerWidth >= 992 && this.activeSheet) this.closeSheet();
         });
@@ -1238,9 +1244,9 @@ export default {
 
 <style scoped>
 .fsp-wrap {
-    --fsp-blue: #1d4ed8; --fsp-blue2: #1e3a8a;
-    --fsp-green: #16a34a; --fsp-red: #dc2626; --fsp-orange: #d97706;
-    --fsp-border: #e5e7eb; --fsp-bg: #f8fafc; --fsp-text: #111827; --fsp-muted: #6b7280;
+    --fsp-blue: #1d4ed8; --fsp-accent2: #1e3a8a;
+    --fsp-green: #16a34a; --fsp-red: #dc2626; --fsp-orange: #d97706; --fsp-accent: #03c5ff;
+    --fsp-border: #e5e7eb; --fsp-bg: #f8fafc; --fsp-text: #111827; --fsp-muted: #6b7280; 
     font-family: 'Segoe UI', system-ui, sans-serif;
     width: 100%; padding-bottom: 24px;
 }
@@ -1293,7 +1299,7 @@ export default {
 }
 .fsp-chip i { font-size: 11px; }
 .fsp-chip:active { transform: scale(.95); }
-.fsp-chip.active { background: var(--fsp-blue); border-color: var(--fsp-blue); color: #fff; box-shadow: 0 2px 8px rgba(29,78,216,.3); }
+.fsp-chip.active { background: var(--fsp-accent); border-color: var(--fsp-accent); color: #fff; box-shadow: 0 2px 8px rgba(29,78,216,.3); }
 .fsp-chip-all { background: #1e3a8a; border-color: #1e3a8a; color: #fff; }
 .fsp-chip-all.has-filter { background: var(--fsp-green); border-color: var(--fsp-green); }
 .fsp-chip-badge { background:#ef4444; color:#fff; font-size:9px; font-weight:800; min-width:16px; height:16px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; padding:0 3px; }
@@ -1306,7 +1312,7 @@ export default {
     display: flex; align-items: center; height: 100%;
 }
 .fsp-count-pill span {
-    background: #eff6ff; color: var(--fsp-blue);
+    background: #eff6ff; color: var(--fsp-accent);
     font-size: 12px; font-weight: 800;
     padding: 4px 10px; border-radius: 12px; white-space: nowrap;
 }
@@ -1361,15 +1367,15 @@ export default {
     cursor: pointer; transition: all .2s; position: relative;
     -webkit-tap-highlight-color: transparent;
 }
-.fsp-stop-card.active { border-color: var(--fsp-blue); background: #eff6ff; box-shadow: 0 0 0 3px rgba(29,78,216,.1); }
+.fsp-stop-card.active { border-color: var(--fsp-accent); background: #eff6ff; box-shadow: 0 0 0 3px rgba(29,78,216,.1); }
 .fsp-sc-icon { font-size: 22px; color: var(--fsp-muted); }
-.fsp-stop-card.active .fsp-sc-icon { color: var(--fsp-blue); }
+.fsp-stop-card.active .fsp-sc-icon { color: var(--fsp-accent); }
 .fsp-sc-label { font-size: 13px; font-weight: 700; color: var(--fsp-text); }
-.fsp-stop-card.active .fsp-sc-label { color: var(--fsp-blue); }
+.fsp-stop-card.active .fsp-sc-label { color: var(--fsp-accent); }
 .fsp-sc-count { font-size: 11px; color: var(--fsp-muted); }
 .fsp-sc-tick {
     position: absolute; top: 6px; right: 6px;
-    width: 18px; height: 18px; background: var(--fsp-blue);
+    width: 18px; height: 18px; background: var(--fsp-accent);
     border-radius: 50%; display: flex; align-items: center; justify-content: center;
     font-size: 9px; color: #fff;
 }
@@ -1378,22 +1384,22 @@ export default {
 .fsp-price-bubbles { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 20px; }
 .fsp-price-bubble { text-align: center; flex: 1; background: var(--fsp-bg); border: 1.5px solid var(--fsp-border); border-radius: 12px; padding: 10px; }
 .fsp-price-bubble label { display: block; font-size: 10px; font-weight: 700; color: var(--fsp-muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
-.fsp-pb-val { font-size: 20px; font-weight: 800; color: var(--fsp-blue); }
+.fsp-pb-val { font-size: 20px; font-weight: 800; color: var(--fsp-accent); }
 .fsp-pb-sep { font-size: 20px; color: var(--fsp-muted); }
 
 .fsp-dual-range { position: relative; height: 40px; margin: 4px 0 14px; }
 .fsp-dr-track { position: absolute; top: 50%; left: 0; right: 0; height: 6px; background: #e5e7eb; border-radius: 3px; transform: translateY(-50%); }
-.fsp-dr-fill  { position: absolute; height: 100%; background: var(--fsp-blue); border-radius: 3px; }
+.fsp-dr-fill  { position: absolute; height: 100%; background: var(--fsp-accent); border-radius: 3px; }
 .fsp-range { position: absolute; top: 50%; transform: translateY(-50%); width: 100%; height: 6px; -webkit-appearance: none; background: transparent; outline: none; pointer-events: none; margin: 0; }
-.fsp-range::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; border-radius: 50%; background: var(--fsp-blue); border: 3px solid #fff; box-shadow: 0 2px 8px rgba(29,78,216,.35); cursor: pointer; pointer-events: all; transition: transform .15s; }
+.fsp-range::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; border-radius: 50%; background: var(--fsp-accent); border: 3px solid #fff; box-shadow: 0 2px 8px rgba(29,78,216,.35); cursor: pointer; pointer-events: all; transition: transform .15s; }
 .fsp-range::-webkit-slider-thumb:active { transform: scale(1.2); }
-.fsp-range::-moz-range-thumb { width: 26px; height: 26px; border-radius: 50%; background: var(--fsp-blue); border: 3px solid #fff; box-shadow: 0 2px 8px rgba(29,78,216,.35); cursor: pointer; pointer-events: all; }
+.fsp-range::-moz-range-thumb { width: 26px; height: 26px; border-radius: 50%; background: var(--fsp-accent); border: 3px solid #fff; box-shadow: 0 2px 8px rgba(29,78,216,.35); cursor: pointer; pointer-events: all; }
 .fsp-range-lo { z-index: 3; }
 .fsp-range-hi { z-index: 4; }
 
 .fsp-presets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 .fsp-preset-btn { padding: 5px 12px; border: 1.5px solid var(--fsp-border); border-radius: 20px; background: var(--fsp-bg); font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; color: #374151; }
-.fsp-preset-btn.active { border-color: var(--fsp-blue); background: #eff6ff; color: var(--fsp-blue); }
+.fsp-preset-btn.active { border-color: var(--fsp-accent); background: #eff6ff; color: var(--fsp-accent); }
 .fsp-range-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--fsp-muted); margin-bottom: 16px; }
 
 /* TIME grid */
@@ -1405,12 +1411,12 @@ export default {
     cursor: pointer; transition: all .2s; position: relative;
     -webkit-tap-highlight-color: transparent;
 }
-.fsp-time-card.active { border-color: var(--fsp-blue); background: #eff6ff; }
+.fsp-time-card.active { border-color: var(--fsp-accent); background: #eff6ff; }
 .fsp-tc-icon  { font-size: 24px; color: var(--fsp-muted); }
 .fsp-tc-name  { font-size: 13px; font-weight: 700; color: var(--fsp-text); }
 .fsp-tc-range { font-size: 10px; color: var(--fsp-muted); }
-.fsp-time-card.active .fsp-tc-icon { color: var(--fsp-blue); }
-.fsp-time-card.active .fsp-tc-name { color: var(--fsp-blue); }
+.fsp-time-card.active .fsp-tc-icon { color: var(--fsp-accent); }
+.fsp-time-card.active .fsp-tc-name { color: var(--fsp-accent); }
 
 /* AIRLINE grid */
 .fsp-airline-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
@@ -1421,11 +1427,11 @@ export default {
     cursor: pointer; transition: all .2s; position: relative; text-align: center;
     -webkit-tap-highlight-color: transparent;
 }
-.fsp-airline-card.active { border-color: var(--fsp-blue); background: #eff6ff; box-shadow: 0 0 0 3px rgba(29,78,216,.1); }
+.fsp-airline-card.active { border-color: var(--fsp-accent); background: #eff6ff; box-shadow: 0 0 0 3px rgba(29,78,216,.1); }
 .fsp-ac-img { width: 48px; height: 32px; object-fit: contain; border-radius: 6px; border: 1px solid var(--fsp-border); background: #fff; padding: 3px; }
 .fsp-ac-fb  { width: 48px; height: 32px; background: #e5e7eb; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: #374151; }
 .fsp-ac-name  { font-size: 12px; font-weight: 700; color: var(--fsp-text); line-height: 1.2; }
-.fsp-ac-price { font-size: 11px; font-weight: 700; color: var(--fsp-blue); }
+.fsp-ac-price { font-size: 11px; font-weight: 700; color: var(--fsp-accent); }
 
 /* FARE list */
 .fsp-fare-list { display: flex; flex-direction: column; gap: 10px; }
@@ -1438,28 +1444,28 @@ export default {
 }
 .fsp-fare-row.active.fc-green { border-color: var(--fsp-green); background: #f0fdf4; }
 .fsp-fare-row.active.fc-red   { border-color: var(--fsp-red);   background: #fef2f2; }
-.fsp-fare-row.active.fc-all   { border-color: var(--fsp-blue);  background: #eff6ff; }
+.fsp-fare-row.active.fc-all   { border-color: var(--fsp-accent);  background: #eff6ff; }
 .fsp-fr-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
 .fc-green .fsp-fr-icon { background: #dcfce7; color: var(--fsp-green); }
 .fc-red   .fsp-fr-icon { background: #fee2e2; color: var(--fsp-red);   }
-.fc-all   .fsp-fr-icon { background: #eff6ff; color: var(--fsp-blue);  }
+.fc-all   .fsp-fr-icon { background: #eff6ff; color: var(--fsp-accent);  }
 .fsp-fr-info { flex: 1; }
 .fsp-fr-name  { font-size: 13px; font-weight: 700; color: var(--fsp-text); }
 .fsp-fr-sub   { font-size: 11px; color: var(--fsp-muted); margin-top: 2px; }
 .fsp-fr-count { font-size: 11px; color: var(--fsp-muted); white-space: nowrap; }
-.fsp-fr-tick  { font-size: 18px; color: var(--fsp-blue); flex-shrink: 0; }
+.fsp-fr-tick  { font-size: 18px; color: var(--fsp-accent); flex-shrink: 0; }
 .fsp-fare-row.active.fc-green .fsp-fr-tick { color: var(--fsp-green); }
 .fsp-fare-row.active.fc-red   .fsp-fr-tick { color: var(--fsp-red);   }
 
 /* Shared apply */
 .fsp-apply-btn {
     width: 100%; padding: 14px;
-    background: var(--fsp-blue); color: #fff; border: none;
+    background: var(--fsp-accent); color: #fff; border: none;
     border-radius: 12px; font-size: 14px; font-weight: 700;
     cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
     transition: background .2s; -webkit-tap-highlight-color: transparent;
 }
-.fsp-apply-btn:active { background: var(--fsp-blue2); transform: scale(.99); }
+.fsp-apply-btn:active { background: var(--fsp-accent); transform: scale(.99); }
 
 /* Desktop sidebar */
 /* Add smooth transition for sidebar */

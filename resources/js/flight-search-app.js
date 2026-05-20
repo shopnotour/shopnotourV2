@@ -2,7 +2,7 @@ import Vue from 'vue/dist/vue.esm.js';
 import FlightSearch from './components/FlightSearchPage.vue';
 import FlightSearchForm from './components/Flightsearchform.vue';
 import FlightHomepageSections from './components/FlightHomepageSections.vue';
-import FlightSearchSummary from './components/FlightSearchSummary.vue'; // Add this
+import FlightSearchSummary from './components/FlightSearchSummary.vue';
 
 console.log('✅ flight-search-app.js executed');
 

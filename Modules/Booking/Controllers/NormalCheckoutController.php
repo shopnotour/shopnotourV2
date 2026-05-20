@@ -1618,10 +1618,40 @@ class NormalCheckoutController extends BookingController
                     ->get();
             }
 
+            // Build selected leg data from flight data
+            $segmentData = [];
+            $pnrRawData = is_string($booking->pnr_raw_data)
+                ? json_decode($booking->pnr_raw_data, true)
+                : (array)($booking->pnr_raw_data ?? []);
+            $fdJourneys = $pnrRawData['journeys'] ?? [];
+            $fdSegments = $pnrRawData['segments'] ?? [];
+            $legsInput = $request->legs ?? [];
+
+            if (!empty($fdJourneys) && !empty($legsInput)) {
+                $segIndex = 0;
+                foreach ($fdJourneys as $jIdx => $journey) {
+                    $count = (int)($journey['number_of_flights'] ?? 1);
+                    $selected = !empty($legsInput[$jIdx]['selected']);
+                    if ($selected) {
+                        $legSegs = array_slice($fdSegments, $segIndex, $count);
+                        $segmentData[] = [
+                            'type'           => $jIdx === 0 ? 'outbound' : 'return',
+                            'label'          => ($journey['first_airport_code'] ?? '') . ' → ' . ($journey['last_airport_code'] ?? ''),
+                            'date'           => $journey['departure_date'] ?? '',
+                            'flight_count'   => $count,
+                            'journey'        => $journey,
+                            'segments'       => $legSegs,
+                        ];
+                    }
+                    $segIndex += $count;
+                }
+            }
+
             // Create refund request
             $refund = BookingRefund::create([
                 'booking_id' => $booking->id,
-                'passenger_id' => $passengerIds, // ✅ Store as JSON array
+                'segment' => $segmentData,
+                'passenger_id' => $passengerIds,
                 'pnr' => $request->pnr_number,
                 'refund_type' => $isAllPassengers ? 'full' : 'partial',
                 'refund_amount' => 0, // ✅ Admin will calculate
@@ -1639,6 +1669,7 @@ class NormalCheckoutController extends BookingController
                 'is_all_passengers' => $isAllPassengers,
                 'passenger_ids' => $passengerIds,
                 'passenger_count' => count($passengerIds),
+                'segments' => $segmentData,
                 'reason' => $request->refund_reason
             ]);
 
@@ -1656,6 +1687,7 @@ class NormalCheckoutController extends BookingController
                 'data' => [
                     'refund_id' => $refund->id,
                     'passenger_count' => count($passengerIds),
+                    'segments' => $segmentData,
                     'status' => 'pending'
                 ]
             ]);

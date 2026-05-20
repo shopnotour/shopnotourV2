@@ -1576,26 +1576,91 @@
 
     {{-- Refund Modal --}}
     <div id="refundModal" class="cmodal">
-        <div class="mbox">
+        <div class="mbox" style="max-width:560px">
             <div style="display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid #e5e7eb">
                 <div style="width:38px;height:38px;border-radius:50%;background:#fef3c7;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">💰</div>
                 <div style="font-size:15px;font-weight:700;color:#1f2937">Process Refund</div>
             </div>
             <form onsubmit="doModal(event,'refund')">
-                <div style="padding:16px 18px">
+                <div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+
+                    {{-- Warning --}}
+                    <div style="background:#fffbeb;border:1.5px solid #fcd34d;border-radius:8px;padding:10px 13px;font-size:11.5px;color:#92400e;line-height:1.6">
+                        ⚠️ <strong>Refund প্রক্রিয়ায়:</strong><br>
+                        রিফান্ড অনুরোধটি আমাদের টিম পর্যালোচনা করে প্রকৃত অবস্থা জানাবে।
+                    </div>
+
                     <input type="hidden" name="pnr_number" value="{{ $fd['booking_id'] ?? $booking->pnr_id }}">
-                    <div style="margin-bottom:10px">
-                        <label style="display:block;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">Select Passengers</label>
+
+                    {{-- Passengers --}}
+                    <div>
+                        <label style="display:block;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">Passengers</label>
                         <select name="passenger_ids[]" class="select2-pax" multiple required style="width:100%">
-                            <option value="all">All Passengers ({{ $totalPax }})</option>
-                            @foreach($passengers as $p)<option value="{{ $p->id }}">{{ $p->first_name ?? '' }} {{ $p->last_name ?? '' }}</option>@endforeach
+                            <option value="all">All ({{ $totalPax }})</option>
+                            @foreach($passengers as $p)
+                                <option value="{{ $p->id }}">{{ $p->first_name ?? '' }} {{ $p->last_name ?? '' }}</option>
+                            @endforeach
                         </select>
                     </div>
-                    <div><label style="display:block;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">Reason</label><textarea name="refund_reason" rows="3" required style="width:100%;padding:8px 10px;border:1.5px solid #e5e7eb;border-radius:7px;font-size:12px;resize:vertical;box-sizing:border-box"></textarea></div>
+
+                    {{-- Leg Selection --}}
+                    <div>
+                        <label style="display:block;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">
+                            Select Leg(s) to Refund
+                        </label>
+                        <div style="display:flex;flex-direction:column;gap:8px">
+                            @foreach($legGroups2 as $li => $legGroup)
+                                @php
+                                    $lgJrn  = $legGroup['journey'];
+                                    $lgSegs = $legGroup['segments'];
+                                    $lgFirst = $lgSegs[0] ?? null;
+                                    $lgLast  = end($lgSegs) ?: null;
+                                    $lgLabel = ($lgJrn['first_airport_code'] ?? '') . ' → ' . ($lgJrn['last_airport_code'] ?? '');
+                                    $lgDate  = !empty($lgJrn['departure_date']) ? date('d M Y', strtotime($lgJrn['departure_date'])) : '';
+                                    $lgMin   = !empty($lgJrn['departure_date']) ? $lgJrn['departure_date'] : date('Y-m-d');
+                                @endphp
+                                <div style="border:1.5px solid #e2e8f0;border-radius:10px;overflow:hidden;transition:border-color .2s">
+                                    <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;background:#f8fafc;user-select:none">
+                                        <input type="checkbox"
+                                               name="legs[{{ $li }}][selected]"
+                                               value="1"
+                                               style="width:16px;height:16px;cursor:pointer;accent-color:#667eea">
+                                        <div style="flex:1">
+                                            <div style="font-size:13px;font-weight:700;color:#1e293b">
+                                                {{ $li === 0 ? '✈ Outbound' : '← Return' }}
+                                                <span style="font-size:12px;font-weight:400;color:#64748b;margin-left:4px">{{ $lgLabel }}</span>
+                                            </div>
+                                            <div style="font-size:11px;color:#94a3b8;margin-top:1px">
+                                                {{ $lgDate }}
+                                                · {{ count($lgSegs) }} flight{{ count($lgSegs) > 1 ? 's' : '' }}
+                                            </div>
+                                        </div>
+                                        <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:{{ $li === 0 ? '#eff6ff' : '#f5f3ff' }};color:{{ $li === 0 ? '#1d4ed8' : '#7c3aed' }}">
+                                        Leg {{ $li + 1 }}
+                                    </span>
+                                    </label>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    {{-- Reason --}}
+                    <div>
+                        <label style="display:block;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">Reason</label>
+                        <textarea name="refund_reason" rows="2" required
+                                  style="width:100%;padding:8px 10px;border:1.5px solid #e5e7eb;border-radius:7px;font-size:12px;resize:vertical;box-sizing:border-box"></textarea>
+                    </div>
                 </div>
+
                 <div style="display:flex;gap:8px;justify-content:flex-end;padding:12px 18px;border-top:1px solid #e5e7eb">
-                    <button type="button" onclick="closeModal('refundModal')" style="padding:8px 16px;border-radius:7px;border:none;background:#f3f4f6;color:#374151;font-size:12px;font-weight:600;cursor:pointer">Cancel</button>
-                    <button type="submit" style="padding:8px 16px;border-radius:7px;border:none;background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-size:12px;font-weight:600;cursor:pointer">Process Refund</button>
+                    <button type="button" onclick="closeModal('refundModal')"
+                            style="padding:8px 16px;border-radius:7px;border:none;background:#f3f4f6;color:#374151;font-size:12px;font-weight:600;cursor:pointer">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            style="padding:8px 16px;border-radius:7px;border:none;background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-size:12px;font-weight:600;cursor:pointer">
+                        Process Refund
+                    </button>
                 </div>
             </form>
         </div>
@@ -2549,6 +2614,7 @@
                 method:  'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json',
                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
                 },
                 body: JSON.stringify(data)

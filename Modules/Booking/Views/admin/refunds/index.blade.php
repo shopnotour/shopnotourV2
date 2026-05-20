@@ -323,6 +323,34 @@
                         <div class="alert alert-warning">
                             <i class="fa fa-info-circle"></i> After setting the amount, user will be notified for approval.
                         </div>
+                        @php
+                            $segData = $refund->segment ?? [];
+                            if (!is_array($segData)) $segData = json_decode($segData, true) ?? [];
+                        @endphp
+                        @if(!empty($segData))
+                            <div class="form-group">
+                                <label>{{ __('Selected Route(s)') }}</label>
+                                <div style="display:flex;flex-direction:column;gap:4px;">
+                                    @foreach($segData as $leg)
+                                        @php
+                                            $isOut = ($leg['type'] ?? '') === 'outbound';
+                                            $icon = $isOut ? '✈' : '←';
+                                            $color = $isOut ? '#1d4ed8' : '#7c3aed';
+                                            $label = $leg['label'] ?? '';
+                                            $dateRaw = $leg['date'] ?? '';
+                                            $dateStr = !empty($dateRaw) ? date('d M Y', strtotime($dateRaw)) : '';
+                                        @endphp
+                                        <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;">
+                                            <span style="font-size:12px;color:{{ $color }}">{{ $icon }}</span>
+                                            <span style="font-size:13px;font-weight:600;color:#1e293b">{{ $label }}</span>
+                                            @if($dateStr)
+                                                <span style="font-size:11px;color:#64748b;margin-left:auto">{{ $dateStr }}</span>
+                                            @endif
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
                         <div class="form-group">
                             <label>{{ __('Passenger Amount') }}</label>
                             <div class="input-group">
@@ -486,6 +514,184 @@
                                 </table>
                             </div>
                         </div>
+
+                        
+                        {{-- Segment / Leg Itinerary --}}
+                        @php
+                            $segData = $refund->segment ?? [];
+                            if (!is_array($segData)) $segData = json_decode($segData, true) ?? [];
+                        @endphp
+                        @if(!empty($segData))
+                            <hr>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <h6><strong>{{ __('Selected Leg(s) for Refund') }}</strong></h6>
+                                    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;margin-top:8px;">
+                                        @foreach($segData as $sg => $leg)
+                                            @php
+                                                $isOut = ($leg['type'] ?? '') === 'outbound';
+                                                $accentColor = $isOut ? '#1d4ed8' : '#7c3aed';
+                                                $accentLight = $isOut ? '#eff6ff' : '#f5f3ff';
+                                                $destColor   = $isOut ? '#6366f1' : '#a78bfa';
+                                                $lineGrad    = $isOut ? '#1d4ed8,#6366f1' : '#7c3aed,#a78bfa';
+                                                $segments    = $leg['segments'] ?? [];
+                                                $firstSeg    = $segments[0] ?? null;
+                                                $lastSeg     = !empty($segments) ? end($segments) : null;
+                                                $legLabel    = $leg['label'] ?? '';
+                                                $legDateRaw  = $leg['date'] ?? '';
+                                                $legDate     = !empty($legDateRaw) ? date('D, d M Y', strtotime($legDateRaw)) : '';
+                                                $fltCount    = $leg['flight_count'] ?? count($segments);
+
+                                                $legMinutes = 0;
+                                                if ($firstSeg && $lastSeg) {
+                                                    $dTs = strtotime($firstSeg['departure_time'] ?? $firstSeg['departure'] ?? 'now');
+                                                    $aTs = strtotime($lastSeg['arrival_time'] ?? $lastSeg['arrival'] ?? 'now');
+                                                    $legMinutes = (int)(($aTs - $dTs) / 60);
+                                                }
+                                                $legDur = floor($legMinutes/60).'h '.($legMinutes%60).'m';
+
+                                                $rawTime = function($dt) {
+                                                    preg_match('/T(\d{2}:\d{2})/', $dt, $m);
+                                                    return $m[1] ?? (preg_match('/\d{2}:\d{2}/', $dt, $m2) ? $m2[0] : '00:00');
+                                                };
+                                                $rawDate = function($dt) {
+                                                    preg_match('/^(\d{4}-\d{2}-\d{2})/', $dt, $m);
+                                                    return !empty($m[1]) ? date('D d M', strtotime($m[1])) : date('D d M', strtotime($dt));
+                                                };
+                                            @endphp
+                                            <div style="margin:0;border-bottom:{{ !$loop->last ? '1px solid #e2e8f0' : 'none' }};">
+                                                {{-- Leg header --}}
+                                                <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f8fafc;border-bottom:1px solid #e2e8f0;flex-wrap:wrap;">
+                                                    <div style="width:26px;height:26px;border-radius:6px;background:{{ $accentLight }};color:{{ $accentColor }};display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0">
+                                                        <i class="fas fa-{{ $isOut ? 'plane-departure' : 'plane-arrival' }}"></i>
+                                                    </div>
+                                                    <div style="flex:1;min-width:0">
+                                                        <div style="font-size:12px;font-weight:700;color:#0f172a">
+                                                            <span style="color:{{ $accentColor }}">{{ $isOut ? '→ Outbound' : '← Return' }}</span>
+                                                            <span style="color:#64748b;font-weight:400;margin-left:5px">{{ $legLabel }}</span>
+                                                        </div>
+                                                        <div style="font-size:10px;color:#64748b;margin-top:1px">
+                                                            {{ $legDate ?: $legDateRaw }}
+                                                            · {{ $fltCount }} flight{{ $fltCount > 1 ? 's' : '' }}
+                                                            · {{ $legDur }} total
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {{-- Desktop timeline --}}
+                                                <div style="padding:14px 16px;overflow-x:auto;">
+                                                    <div style="display:flex;align-items:center;gap:0;min-width:300px">
+                                                        @foreach($segments as $si => $seg)
+                                                            @php
+                                                                $isLastSeg = $si === count($segments) - 1;
+                                                                $acName = $seg['aircraft_name'] ?? $seg['equipment'] ?? '';
+                                                                if (strlen($acName) <= 4 && ctype_alnum($acName)) $acName = '';
+
+                                                                $depTime = $rawTime($seg['departure_time'] ?? $seg['departure'] ?? '');
+                                                                $arrTime = $rawTime($seg['arrival_time'] ?? $seg['arrival'] ?? '');
+                                                                $depDate = $rawDate($seg['departure_time'] ?? $seg['departure'] ?? '');
+                                                                $arrDate = $rawDate($seg['arrival_time'] ?? $seg['arrival'] ?? '');
+                                                                $origin = $seg['origin'] ?? '';
+                                                                $destination = $seg['destination'] ?? '';
+                                                                $flightNum = ($seg['carrier'] ?? '') . ($seg['flight_number'] ?? '');
+                                                                $cabin = $seg['cabin_class'] ?? 'Economy';
+                                                                $durMin = (int)($seg['travel_time'] ?? 0);
+                                                                $durStr = $durMin ? floor($durMin/60).'h '.($durMin%60).'m' : '';
+
+                                                                $statusName = $seg['status_name'] ?? $seg['status'] ?? 'Confirmed';
+                                                                $isHK = in_array($statusName, ['HK','KK','Confirmed']);
+                                                                $meals = $seg['meals'] ?? [];
+                                                                $depTerm = $seg['departure_terminal'] ?? null;
+                                                                $arrTerm = $seg['arrival_terminal'] ?? null;
+
+                                                                $lv = null;
+                                                                if (!$isLastSeg) {
+                                                                    $nextSeg = $segments[$si + 1];
+                                                                    $aTs = strtotime($seg['arrival_time'] ?? $seg['arrival'] ?? 'now');
+                                                                    $dTs = strtotime($nextSeg['departure_time'] ?? $nextSeg['departure'] ?? 'now');
+                                                                    $lvMin = (int)(($dTs - $aTs) / 60);
+                                                                    $lv = [
+                                                                        'airport'   => $destination,
+                                                                        'arr_time'  => $arrTime,
+                                                                        'arr_date'  => $arrDate,
+                                                                        'dep_time'  => $rawTime($nextSeg['departure_time'] ?? $nextSeg['departure'] ?? ''),
+                                                                        'dep_date'  => $rawDate($nextSeg['departure_time'] ?? $nextSeg['departure'] ?? ''),
+                                                                        'duration'  => floor($lvMin/60).'h '.($lvMin%60).'m',
+                                                                        'arr_term'  => $arrTerm,
+                                                                        'dep_term'  => $nextSeg['departure_terminal'] ?? null,
+                                                                        'overnight' => substr($seg['arrival_time'] ?? $seg['arrival'] ?? '',0,10) !== substr($nextSeg['departure_time'] ?? $nextSeg['departure'] ?? '',0,10),
+                                                                    ];
+                                                                }
+                                                            @endphp
+                                                            @if($si === 0)
+                                                                <div style="flex-shrink:0;text-align:center;min-width:64px">
+                                                                    <div style="font-size:11px;font-weight:600;color:#64748b">{{ $depTime }}</div>
+                                                                    <div style="font-size:22px;font-weight:800;color:{{ $accentColor }};line-height:1.1">{{ $origin }}</div>
+                                                                    <div style="font-size:10px;color:#64748b">{{ $depDate }}</div>
+                                                                    @if($depTerm)
+                                                                        <div style="font-size:10px;background:#f1f5f9;border-radius:4px;padding:1px 5px;display:inline-block;margin-top:2px;color:#64748b">T{{ $depTerm }}</div>
+                                                                    @endif
+                                                                </div>
+                                                            @endif
+                                                            <div style="flex:1;display:flex;flex-direction:column;padding:0 4px;min-width:120px">
+                                                                <div style="display:flex;align-items:center;margin-top:18px">
+                                                                    <div style="width:8px;height:8px;border-radius:50%;background:{{ $si===0 ? $accentColor : '#fde68a' }};flex-shrink:0"></div>
+                                                                    <div style="flex:1;height:2px;background:linear-gradient(90deg,{{ $lineGrad }});position:relative">
+                                                                        <span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;padding:0 4px;font-size:11px;color:{{ $accentColor }}">✈</span>
+                                                                    </div>
+                                                                    <div style="width:8px;height:8px;border-radius:50%;background:{{ $isLastSeg ? $destColor : '#fde68a' }};flex-shrink:0"></div>
+                                                                </div>
+                                                                <div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:5px;justify-content:center">
+                                                                    <span style="display:inline-flex;align-items:center;gap:2px;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:600;background:#f1f5f9;color:#475569;font-family:monospace">{{ $flightNum }}</span>
+                                                                    <span style="display:inline-flex;align-items:center;gap:2px;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:600;background:#dbeafe;color:#1e40af">{{ $cabin }}</span>
+                                                                    @if($durStr)
+                                                                        <span style="display:inline-flex;align-items:center;gap:2px;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:600;background:#f1f5f9;color:#475569">{{ $durStr }}</span>
+                                                                    @endif
+                                                                    @if($acName)
+                                                                        <span style="display:inline-flex;align-items:center;gap:2px;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:600;background:#f1f5f9;color:#475569">{{ $acName }}</span>
+                                                                    @endif
+                                                                    @foreach($meals as $meal)
+                                                                        <span style="display:inline-flex;align-items:center;gap:2px;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:600;background:#fff7ed;color:#c2410c">
+                                                                            <i class="fas fa-utensils" style="font-size:7px"></i>
+                                                                            {{ $meal['description'] ?? $meal['code'] ?? $meal }}
+                                                                        </span>
+                                                                    @endforeach
+                                                                    <span style="display:inline-flex;align-items:center;gap:2px;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:600;background:{{ $isHK ? '#dcfce7' : '#fef3c7' }};color:{{ $isHK ? '#166534' : '#92400e' }}">{{ $statusName }}</span>
+                                                                </div>
+                                                            </div>
+                                                            @if($lv)
+                                                                <div style="flex-shrink:0;text-align:center;min-width:76px">
+                                                                    <div style="font-size:10px;font-weight:600;color:#64748b">{{ $lv['arr_time'] }}</div>
+                                                                    <div style="font-size:18px;font-weight:800;color:#92400e;line-height:1.1">{{ $lv['airport'] }}</div>
+                                                                    <div style="font-size:10px;color:#64748b">{{ $lv['arr_date'] }}</div>
+                                                                    @if($lv['arr_term'])<div style="font-size:9px;background:#f1f5f9;border-radius:4px;padding:1px 4px;display:inline-block;color:#64748b">Arr T{{ $lv['arr_term'] }}</div>@endif
+                                                                    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:3px 8px;margin:4px 0;display:inline-block">
+                                                                        <div style="font-size:10px;font-weight:700;color:#d97706"><i class="fas fa-clock" style="font-size:9px"></i> {{ $lv['duration'] }}</div>
+                                                                        @if($lv['overnight'])<div style="font-size:9px;font-weight:700;color:#dc2626">Overnight</div>@endif
+                                                                    </div>
+                                                                    <div style="font-size:10px;font-weight:600;color:#64748b">{{ $lv['dep_time'] }}</div>
+                                                                    @if($lv['dep_term'])<div style="font-size:9px;background:#f1f5f9;border-radius:4px;padding:1px 4px;display:inline-block;color:#64748b">Dep T{{ $lv['dep_term'] }}</div>@endif
+                                                                </div>
+                                                            @else
+                                                                <div style="flex-shrink:0;text-align:center;min-width:64px">
+                                                                    <div style="font-size:11px;font-weight:600;color:#64748b">{{ $arrTime }}</div>
+                                                                    <div style="font-size:22px;font-weight:800;color:{{ $destColor }};line-height:1.1">{{ $destination }}</div>
+                                                                    <div style="font-size:10px;color:#64748b">{{ $arrDate }}</div>
+                                                                    @if($arrTerm)
+                                                                        <div style="font-size:10px;background:#f1f5f9;border-radius:4px;padding:1px 5px;display:inline-block;margin-top:2px;color:#64748b">T{{ $arrTerm }}</div>
+                                                                    @endif
+                                                                </div>
+                                                            @endif
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+
                         <hr>
                         <div class="row">
                             <div class="col-md-12">

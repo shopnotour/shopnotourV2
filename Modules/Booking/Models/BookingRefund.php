@@ -12,6 +12,7 @@ class BookingRefund extends Model
     protected $fillable = [
         'booking_id',
         'pnr',
+        'segment',
         'refund_type',
         'passenger_id',
         'refund_amount',
@@ -30,6 +31,7 @@ class BookingRefund extends Model
 
     protected $casts = [
         'passenger_id' => 'array',
+        'segment' => 'array',
         'requested_at' => 'datetime',
         'approved_at' => 'datetime',
     ];

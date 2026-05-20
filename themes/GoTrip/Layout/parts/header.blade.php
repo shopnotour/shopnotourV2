@@ -467,7 +467,7 @@
         case 'normal_white':{
             $headerClass = '';
             $navTextStyle = 'text-dark-1';
-            $dataBg = 'bg-f3f6ff';
+    $dataBg = '';
             break;
         }
         default: $headerClass = '-fixed bg-f3f6ff';
@@ -598,7 +598,7 @@
                                                 @if(!Auth::check())
                                                     <div class="d-flex items-center ml-20 is-menu-opened-hide md:d-none">
                                                         @php
-                                                            $btn_login = 'border-dark-1 -outline-dark-1 text-dark-1';
+                                                            $btn_login = 'border-dark-1 -outline-white text-white';
                                                             if(in_array($headerStyle,['transparent_v6','transparent_v4','transparent_v9'])) $btn_login = 'border-dark-1 -blue-1 text-dark-1';
                                                             elseif($headerStyle=='normal_white') $btn_login = 'border-dark-1 -blue-1 text-dark-1';
                                                             elseif($headerStyle=='transparent_v5') $btn_login = 'border-dark-4 -blue-1 h-50 text-dark-4';

@@ -12260,3 +12260,12 @@ table.table-5 td {
 .bravo_wrap .bravo_search_flight .bravo_filter .g-filter-item {
     border: none;
 }
+
+/* Fix Sign In button hover - keep border visible */
+.button.-outline-white.bg-blue-1:hover {
+    border-color: var(--color-dark-1) !important;
+    color: var(--color-dark-1) !important;
+}
+.button.-blue-1.bg-blue-1:hover {
+    border-color: var(--color-dark-1) !important;
+}

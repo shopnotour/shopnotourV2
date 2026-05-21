@@ -3,6 +3,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/','TourController@index')->name('tour.admin.index');
 Route::get('/create','TourController@create')->name('tour.admin.create');
+Route::get('/package/create','PackageController@create')->name('package.admin.create');
+Route::post('/package/store/{id}','PackageController@store')->name('package.admin.store');
 Route::get('/edit/{id}','TourController@edit')->name('tour.admin.edit');
 Route::post('/store/{id}','TourController@store')->name('tour.admin.store');
 Route::get('/getForSelect2','TourController@getForSelect2')->name('tour.admin.getForSelect2');

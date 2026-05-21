@@ -62,6 +62,10 @@ class ModuleProvider extends ModuleServiceProvider
                         'title'      => __('All Tours'),
                         'permission' => 'tour_view',
                     ],
+                    'package'=>[
+                        'url'        => route('package.admin.create'),
+                        'title'      => __("package"),
+                    ],
                     'tour_create'=>[
                         'url'        => route('tour.admin.create'),
                         'title'      => __("Add Tour"),

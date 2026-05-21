@@ -138,18 +138,45 @@
                 <h3 class="text-22 fw-500 mt-30">
                     {{__('Tour snapshot')}}
                 </h3>
-
+                
+                
                 <div class="row y-gap-30 justify-between pt-20">
-                    @if($row->duration)
-                    <div class="col-md-auto col-6">
-                        <div class="d-flex">
-                            <i class="icon-clock text-22 text-blue-1 mr-10"></i>
-                            <div class="text-15 lh-15">
-                                {{__('Duration')}}:<br> {{duration_format($row->duration,true)}}
+                    @if(!empty($row->processing_time))
+                        @if($row->duration)
+                            <div class="col-md-auto col-6">
+                                <div class="d-flex">
+                                    <i class="icon-clock text-22 text-blue-1 mr-10"></i>
+                                    <div class="text-15 lh-15">
+                                        {{__('Duration')}}:<br> {{ $row->duration }} MONTH
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+                        @if($row->processing_time)
+                            <div class="col-md-auto col-6">
+                                <div class="d-flex">
+                                    <i class="icon-clock text-22 text-blue-1 mr-10"></i>
+                                    <div class="text-15 lh-15">
+                                        {{__('Processing Time')}}:<br> {{ $row->processing_time }} WEEK
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+                    @else
+
+                        @if($row->duration)
+                        <div class="col-md-auto col-6">
+                            <div class="d-flex">
+                                <i class="icon-clock text-22 text-blue-1 mr-10"></i>
+                                <div class="text-15 lh-15">
+                                    {{__('Duration')}}:<br> {{ $row->duration }} HOUR
+                                </div>
                             </div>
                         </div>
-                    </div>
+                        @endif
+
                     @endif
+                    
 
                     @if($row->max_people)
                     <div class="col-md-auto col-6">

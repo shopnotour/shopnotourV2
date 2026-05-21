@@ -53,72 +53,28 @@
                             <i>{{ __("Leave blank if you dont need to use the min day option") }}</i>
                         </div>
                     </div>
-                    @if(!empty($row->processing_time))
-                        <div class="col-lg-6">
-                            <div class="form-group">
-                                <label class="control-label">{{__("Duration")}}</label>
-
-                                <div class="input-group mb-3">
-                                    <input type="text"
-                                        name="duration"
-                                        class="form-control"
-                                        value="{{ old('duration',$row->duration) }}"
-                                        placeholder="{{ __('Duration') }}"
-                                        aria-describedby="basic-addon2">
-
-                                    <div class="input-group-append">
-                                        <span class="input-group-text" id="basic-addon2">
-                                            {{ __('Months') }}
-                                        </span>
-                                    </div>
+                    <div class="col-lg-6">
+                        <div class="form-group">
+                            <label class="control-label">{{__("Duration")}}</label>
+                            <div class="input-group mb-3">
+                                <input type="text" name="duration" class="form-control" value="{{old('duration',$row->duration)}}" placeholder="{{__("Duration")}}"  aria-describedby="basic-addon2">
+                                <div class="input-group-append">
+                                    <span class="input-group-text" id="basic-addon2">{{__('Months')}}</span>
                                 </div>
                             </div>
                         </div>
-
-                        <div class="col-lg-6">
-                            <div class="form-group">
-                                <label class="control-label">{{__("Processing Time")}}</label>
-
-                                <div class="input-group mb-3">
-                                    <input type="text"
-                                        name="processing_time"
-                                        class="form-control"
-                                        value="{{ old('processing_time',$row->processing_time) }}"
-                                        placeholder="{{ __('Processing Time') }}"
-                                        aria-describedby="basic-addon2">
-
-                                    <div class="input-group-append">
-                                        <span class="input-group-text" id="basic-addon2">
-                                            {{ __('Week') }}
-                                        </span>
-                                    </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="form-group">
+                            <label class="control-label">{{__("Processing Time")}}</label>
+                            <div class="input-group mb-3">
+                                <input type="text" name="processing_time" class="form-control" value="{{old('processing_time',$row->processing_time)}}" placeholder="{{__("Processing Time")}}"  aria-describedby="basic-addon2">
+                                <div class="input-group-append">
+                                    <span class="input-group-text" id="basic-addon2">{{__('Week')}}</span>
                                 </div>
                             </div>
                         </div>
-
-                    @else
-
-                        <div class="col-lg-6">
-                            <div class="form-group">
-                                <label class="control-label">{{__("Duration")}}</label>
-
-                                <div class="input-group mb-3">
-                                    <input type="text"
-                                        name="duration"
-                                        class="form-control"
-                                        value="{{ old('duration',$row->duration) }}"
-                                        placeholder="{{ __('Duration') }}"
-                                        aria-describedby="basic-addon2">
-
-                                    <div class="input-group-append">
-                                        <span class="input-group-text" id="basic-addon2">
-                                            {{ __('Hours') }}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    @endif
+                    </div>
                 </div>
             @endif
 

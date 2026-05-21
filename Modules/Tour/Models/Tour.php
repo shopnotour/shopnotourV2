@@ -56,6 +56,7 @@ class Tour extends Bookable
         'sale_price',
         //Tour type
         'duration',
+        'processing_time',
         'max_people',
         'min_people',
         //Extra Info

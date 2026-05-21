@@ -561,11 +561,11 @@ return $result;
         $priceVerified = session('price_verified');
         $searchParams  = Session::get('flight_search_params');
         $reissueData   = Session::get('reissue_data');
-        
+
         if (!$flightData) {
                 return back()->with('error', 'Flight data not found. Please search again.');
             }
-            
+
             if (!$searchParams) {
                 return back()->with('error', 'Search session expired. Please search again.');
             }
@@ -2746,15 +2746,328 @@ dd($result);
 
     }
 
+//    public function cancelBooking($id, $cancelledBy = null)
+//    {
+////        dd(Carbon::now());
+//        $isAuto = $cancelledBy !== null;
+//
+//        Log::info('🔴 Cancel Booking Request Started', [
+//            'booking_id' => $id,
+//            'by'         => $cancelledBy ?? auth()->id(),
+//            'auto'       => $isAuto,
+//        ]);
+//
+//        try {
+//            DB::beginTransaction();
+//
+//            /* ── 1. Load booking ──────────────────────────────── */
+//            $booking = Booking::with(['passengers'])->findOrFail($id);
+//
+//            /* ── 2. Guard: already cancelled ─────────────────── */
+//            if ($booking->status === 'cancelled') {
+//                throw new \Exception('This booking is already cancelled.');
+//            }
+//
+//            /* ── 3. Guard: allowed statuses ──────────────────── */
+//            $cancellable = ['booked'];
+//            if (!in_array($booking->status, $cancellable)) {
+//                throw new \Exception(
+//                    'Booking cannot be cancelled. Current status: ' . $booking->status
+//                );
+//            }
+//
+//            /* ── 4. Guard: must have PNR ─────────────────────── */
+//            if (!$booking->pnr_id) {
+//                throw new \Exception('No PNR found for this booking.');
+//            }
+//
+//            Log::info('📦 Booking Found', [
+//                'booking_id' => $booking->id,
+//                'pnr'        => $booking->pnr_id,
+//                'source'     => $booking->source,
+//                'status'     => $booking->status,
+//                'paid'       => $booking->paid,
+//                'passengers' => $booking->passengers->count(),
+//            ]);
+//
+//            /* ── 5. GDS cancellation ─────────────────────────── */
+//            $gdsResponse = null;
+//
+//            if ($booking->source === 'sabre') {
+//                $sabreService = new \App\Service\SabreApiService();
+//                $gdsResponse = $sabreService->cancelBooking($booking->pnr_id);
+//
+//                Log::info('📥 Sabre Cancel Response', ['response' => $gdsResponse]);
+//
+//                if (!$gdsResponse || (isset($gdsResponse['status']) && $gdsResponse['status'] === 'error')) {
+//                    throw new \Exception(
+//                        'Sabre cancellation failed: ' . ($gdsResponse['message'] ?? 'Unknown error')
+//                    );
+//                }
+//
+//            }elseif ($booking->source === 'travelport') {
+//                    $pnrData = json_decode($booking->pnr_raw_data, true);
+//
+//                    $urLocatorCode = $pnrData['universal_record']['ur_locator_code']
+//                        ?? $pnrData['universal_record']['locator_code']
+//                        ?? null;
+//
+//                    if (!$urLocatorCode) {
+//                        throw new \Exception('Universal Record Locator Code not found in PNR data');
+//                    }
+//
+//                    $cancelService = new TravelPortCancelService();
+//                    $gdsResponse   = $cancelService->cancelEntireBooking($urLocatorCode);
+//
+//                    Log::info('📥 Travelport Cancel Response', ['response' => $gdsResponse]);
+//
+//                    if (!$gdsResponse || !($gdsResponse['success'] ?? false)) {
+//                        throw new \Exception(
+//                            'Travelport cancellation failed: ' . ($gdsResponse['fault_string'] ?? $gdsResponse['error'] ?? 'Unknown error')
+//                        );
+//                    }
+//                } else {
+//                throw new \Exception('Unknown booking source: ' . ($booking->source ?? 'null'));
+//            }
+//
+//            /* ── 6. Update booking status ────────────────────── */
+//            $cancelNote = 'Cancelled on ' . now()->format('d M Y, h:i A') .
+//                ' by ' . ($cancelledBy ?? auth()->user()->name ?? 'Admin') .
+//                ' (ID: ' . ($cancelledBy ?? auth()->id()) . ')';
+//
+//            $booking->update([
+//                'status'         => 'cancelled',
+//                'customer_notes' => $booking->customer_notes
+//                    ? $booking->customer_notes . ' | ' . $cancelNote
+//                    : $cancelNote,
+//            ]);
+//
+//            /* ── 7. Cancel all passengers ────────────────────── */
+//            $updatedPassengers = $booking->passengers()->update([
+//                'status' => 'cancelled',
+//            ]);
+//
+//            Log::info('✅ Passengers Cancelled', ['count' => $updatedPassengers]);
+//
+//            /* ── 8. Transaction — only if paid > 0 ──────────── */
+//            $paidAmount = (float) ($booking->paid ?? 0);
+//
+//            if ($paidAmount > 0 && $booking->user_id) {
+//
+//                Transaction::create([
+//                    'user_id'          => $booking->user_id,
+//                    'booking_id'       => $booking->id,
+//                    'ref_id'           => $booking->id,
+//                    'type'             => 'credit',
+//                    'transaction_type' => 'booking_cancelled',
+//                    'amount'           => $paidAmount,
+//                    'status'           => 'pending',
+//                    'reference'        => 'Booking Cancelled - #' . $booking->code,
+//                    'remarks'          => 'Booking cancelled. PNR: ' . $booking->pnr_id,
+//                    'meta'             => json_encode([
+//                        'pnr'          => $booking->pnr_id,
+//                        'paid_amount'  => $paidAmount,
+//                        'currency'     => 'BDT',
+//                        'cancelled_at' => now()->toDateTimeString(),
+//                        'cancelled_by' => $cancelledBy ?? auth()->id(),
+//                        'source'       => $booking->source,
+//                        'gds_response' => $gdsResponse,
+//                    ]),
+//                    'create_user' => $cancelledBy ?? auth()->id(),
+//                ]);
+//
+//                Log::info('💳 Refund Transaction Created', [
+//                    'booking_id' => $booking->id,
+//                    'amount'     => $paidAmount,
+//                ]);
+//
+//            } else {
+//                Log::info('ℹ️ No transaction — paid is 0 or no user', [
+//                    'booking_id' => $booking->id,
+//                    'paid'       => $paidAmount,
+//                    'user_id'    => $booking->user_id,
+//                ]);
+//            }
+//
+//            DB::commit();
+//
+//            Log::info('✅✅✅ Booking Cancelled Successfully', [
+//                'booking_id'         => $booking->id,
+//                'pnr'                => $booking->pnr_id,
+//                'source'             => $booking->source,
+//                'passengers_updated' => $updatedPassengers,
+//                'refund_created'     => $paidAmount > 0,
+//                'refund_amount'      => $paidAmount,
+//                'auto_cancelled'     => $isAuto,
+//            ]);
+//
+//            $msg = "Booking cancelled successfully!\nPNR: {$booking->pnr_id}\nPassengers updated: {$updatedPassengers}";
+//            if ($paidAmount > 0) {
+//                $msg .= "\nRefund of ৳" . number_format($paidAmount, 2) . " queued for review.";
+//            }
+//
+//            // Auto cancel (Job থেকে call) হলে true return করো
+//            if ($isAuto) {
+//                return true;
+//            }
+//
+//            return redirect()->back()->with('success', $msg);
+//
+//        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+//            DB::rollBack();
+//            Log::error('❌ Booking Not Found', ['booking_id' => $id]);
+//
+//            if ($isAuto) {
+//                throw $e; // Job retry করবে
+//            }
+//            return redirect()->back()->with('error', 'Booking not found.');
+//
+//        } catch (\Exception $e) {
+//            DB::rollBack();
+//            Log::error('❌❌❌ Booking Cancellation Failed', [
+//                'booking_id' => $id,
+//                'error'      => $e->getMessage(),
+//                'line'       => $e->getLine(),
+//                'file'       => $e->getFile(),
+//            ]);
+//
+//            if ($isAuto) {
+//                throw $e; // Job retry করবে
+//            }
+//            return redirect()->back()->with('error', 'Cancellation failed: ' . $e->getMessage());
+//        }
+//    }
+//
+//
+//
+//    public function cancelTickets($id)
+//    {
+//        Log::info('🔴 Cancel Ticket Request Started', [
+//            'booking_id' => $id,
+//            'admin_id' => auth()->id()
+//        ]);
+//
+//        try {
+//            DB::beginTransaction();
+//
+//            $booking = Booking::with(['passengers'])->findOrFail($id);
+//
+//            // ✅ Validate booking status
+//            if (!in_array($booking->status, ['ticketed', 'completed', 'booked'])) {
+//                throw new \Exception('Booking cannot be cancelled. Current status: ' . $booking->status);
+//            }
+//
+//            // ✅ Check PNR
+//            if (!$booking->pnr_id) {
+//                throw new \Exception('No PNR found for this booking');
+//            }
+//
+//            // ✅ Check if already cancelled
+//            if ($booking->status === 'cancelled') {
+//                throw new \Exception('This booking is already cancelled');
+//            }
+//
+//            Log::info('📦 Booking Found', [
+//                'booking_id' => $booking->id,
+//                'pnr' => $booking->pnr_id,
+//                'status' => $booking->status,
+//                'passengers' => $booking->passengers->count()
+//            ]);
+//
+//            if ($booking->source === 'sabre') {
+//                // ✅ Call Sabre Cancel API
+//                $sabreService = new \App\Service\SabreApiService();
+//                $sabreResponse = $sabreService->cancelBooking($booking->pnr_id);
+//                Log::info('📥 Sabre Response Received', [
+//                    'response' => $sabreResponse
+//                ]);
+//            }
+//
+//            // ✅ Validate Sabre response
+//            if (!$sabreResponse || (isset($sabreResponse['status']) && $sabreResponse['status'] === 'error')) {
+//                throw new \Exception('Failed to cancel booking in Sabre: ' . ($sabreResponse['message'] ?? 'Unknown error'));
+//            }
+//
+//            // ✅ Update booking status
+//            $booking->update([
+//                'status' => 'cancelled',
+//                'customer_notes' => ($booking->customer_notes ? $booking->customer_notes . ' | ' : '') .
+//                    'Cancelled on ' . now()->format('d M Y, h:i A') . ' by ' . (auth()->user()->name ?? 'Admin')
+//            ]);
+//
+//            // ✅ Update all passengers
+//            $updatedPassengers = $booking->passengers()->update([
+//                'status' => 'cancelled'
+//            ]);
+//
+//            Log::info('✅ Passengers Updated', [
+//                'count' => $updatedPassengers
+//            ]);
+//
+//            // ✅ Create transaction record (for refund tracking)
+//            if ($booking->user_id) {
+//                Transaction::create([
+//                    'user_id' => $booking->user_id,
+//                    'booking_id' => $booking->id,
+//                    'ref_id' => $booking->id,
+//                    'type' => 'credit',
+//                    'transaction_type' => 'booking_cancelled',
+//                    'amount' => 0, // Will be updated when refund is processed
+//                    'status' => 'pending',
+//                    'reference' => 'Booking cancelled - #' . $booking->id,
+//                    'remarks' => 'Ticket cancelled. PNR: ' . $booking->pnr_id,
+//                    'meta' => json_encode([
+//                        'pnr' => $booking->pnr_id,
+//                        'cancelled_at' => now()->toDateTimeString(),
+//                        'cancelled_by' => auth()->id(),
+//                        'sabre_response' => $sabreResponse
+//                    ]),
+//                    'create_user' => auth()->id(),
+//                    'created_at' => now(),
+//                ]);
+//            }
+//
+//            DB::commit();
+//
+//            Log::info('✅✅✅ Ticket Cancelled Successfully', [
+//                'booking_id' => $booking->id,
+//                'pnr' => $booking->pnr_id,
+//                'passengers_updated' => $updatedPassengers
+//            ]);
+//
+//            return redirect()->back()->with('success',
+//                "Ticket cancelled successfully!\n\nPNR: {$booking->pnr_id}\nPassengers: {$updatedPassengers}"
+//            );
+//
+//        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+//            DB::rollBack();
+//            Log::error('❌ Booking Not Found', [
+//                'booking_id' => $id
+//            ]);
+//            return redirect()->back()->with('error', 'Booking not found');
+//
+//        } catch (\Exception $e) {
+//            DB::rollBack();
+//            Log::error('❌❌❌ Ticket Cancellation Failed', [
+//                'booking_id' => $id,
+//                'error' => $e->getMessage(),
+//                'line' => $e->getLine(),
+//                'file' => $e->getFile()
+//            ]);
+//
+//            return redirect()->back()->with('error', 'Failed to cancel ticket: ' . $e->getMessage());
+//        }
+//    }
+
+
     public function cancelBooking($id, $cancelledBy = null)
     {
-//        dd(Carbon::now());
         $isAuto = $cancelledBy !== null;
 
         Log::info('🔴 Cancel Booking Request Started', [
             'booking_id' => $id,
-            'by'         => $cancelledBy ?? auth()->id(),
-            'auto'       => $isAuto,
+            'by' => $cancelledBy ?? auth()->id(),
+            'auto' => $isAuto,
         ]);
 
         try {
@@ -2769,12 +3082,11 @@ dd($result);
             }
 
             /* ── 3. Guard: allowed statuses ──────────────────── */
-            $cancellable = ['booked'];
-            if (!in_array($booking->status, $cancellable)) {
-                throw new \Exception(
-                    'Booking cannot be cancelled. Current status: ' . $booking->status
-                );
-            }
+            // পরে status অনুযায়ী restrict করা হবে
+            // $cancellable = ['booked'];
+            // if (!in_array($booking->status, $cancellable)) {
+            //     throw new \Exception('Booking cannot be cancelled. Current status: ' . $booking->status);
+            // }
 
             /* ── 4. Guard: must have PNR ─────────────────────── */
             if (!$booking->pnr_id) {
@@ -2783,10 +3095,10 @@ dd($result);
 
             Log::info('📦 Booking Found', [
                 'booking_id' => $booking->id,
-                'pnr'        => $booking->pnr_id,
-                'source'     => $booking->source,
-                'status'     => $booking->status,
-                'paid'       => $booking->paid,
+                'pnr' => $booking->pnr_id,
+                'source' => $booking->source,
+                'status' => $booking->status,
+                'paid' => $booking->paid,
                 'passengers' => $booking->passengers->count(),
             ]);
 
@@ -2805,29 +3117,38 @@ dd($result);
                     );
                 }
 
-            }elseif ($booking->source === 'travelport') {
-                    $pnrData = json_decode($booking->pnr_raw_data, true);
+            } elseif ($booking->source === 'travelport') {
 
-                    $urLocatorCode = $pnrData['universal_record']['ur_locator_code']
-                        ?? $pnrData['universal_record']['locator_code']
-                        ?? null;
+                $pnrData = json_decode($booking->pnr_raw_data, true);
 
-                    if (!$urLocatorCode) {
-                        throw new \Exception('Universal Record Locator Code not found in PNR data');
-                    }
+                $urLocatorCode = $pnrData['universal_record']['ur_locator_code']
+                    ?? $pnrData['universal_record']['locator_code']
+                    ?? null;
 
-                    $cancelService = new TravelPortCancelService();
-                    $gdsResponse   = $cancelService->cancelEntireBooking($urLocatorCode);
+                if (!$urLocatorCode) {
+                    throw new \Exception('Universal Record Locator Code not found in PNR data');
+                }
 
-                    Log::info('📥 Travelport Cancel Response', ['response' => $gdsResponse]);
+                $cancelService = new TravelPortCancelService();
+                $gdsResponse = $cancelService->cancelEntireBooking($urLocatorCode);
 
-                    if (!$gdsResponse || !($gdsResponse['success'] ?? false)) {
-                        throw new \Exception(
-                            'Travelport cancellation failed: ' . ($gdsResponse['fault_string'] ?? $gdsResponse['error'] ?? 'Unknown error')
-                        );
-                    }
-                } else {
-                throw new \Exception('Unknown booking source: ' . ($booking->source ?? 'null'));
+                Log::info('📥 Travelport Cancel Response', ['response' => $gdsResponse]);
+
+                if (!$gdsResponse || !($gdsResponse['success'] ?? false)) {
+                    throw new \Exception(
+                        'Travelport cancellation failed: ' . ($gdsResponse['fault_string'] ?? $gdsResponse['error'] ?? 'Unknown error')
+                    );
+                }
+
+            } elseif ($booking->source === 'manual') {
+                // Manual booking — GDS call লাগবে না
+                $gdsResponse = ['success' => true, 'message' => 'Manual booking cancelled locally'];
+                Log::info('📥 Manual Booking Cancel (no GDS call)');
+
+            } else {
+                // অন্য source — GDS call skip করো, শুধু locally cancel
+                $gdsResponse = ['success' => true, 'message' => 'Cancelled locally, source: ' . $booking->source];
+                Log::warning('⚠️ Unknown source, cancelling locally', ['source' => $booking->source]);
             }
 
             /* ── 6. Update booking status ────────────────────── */
@@ -2836,7 +3157,8 @@ dd($result);
                 ' (ID: ' . ($cancelledBy ?? auth()->id()) . ')';
 
             $booking->update([
-                'status'         => 'cancelled',
+                'status' => 'cancelled',
+//                'booking_date' => now(),  // cancel date set করো
                 'customer_notes' => $booking->customer_notes
                     ? $booking->customer_notes . ' | ' . $cancelNote
                     : $cancelNote,
@@ -2850,27 +3172,28 @@ dd($result);
             Log::info('✅ Passengers Cancelled', ['count' => $updatedPassengers]);
 
             /* ── 8. Transaction — only if paid > 0 ──────────── */
-            $paidAmount = (float) ($booking->paid ?? 0);
+            $paidAmount = (float)($booking->paid ?? 0);
 
-            if ($paidAmount > 0 && $booking->user_id) {
+            if ($paidAmount > 0 && $booking->customer_id) {
 
-                Transaction::create([
-                    'user_id'          => $booking->user_id,
-                    'booking_id'       => $booking->id,
-                    'ref_id'           => $booking->id,
-                    'type'             => 'credit',
+                \Modules\User\Models\Wallet\Transaction::create([
+                    'user_id' => $booking->customer_id,
+                    'booking_id' => $booking->id,
+                    'ref_id' => $booking->id,
+                    'type' => 'credit',
                     'transaction_type' => 'booking_cancelled',
-                    'amount'           => $paidAmount,
-                    'status'           => 'pending',
-                    'reference'        => 'Booking Cancelled - #' . $booking->code,
-                    'remarks'          => 'Booking cancelled. PNR: ' . $booking->pnr_id,
-                    'meta'             => json_encode([
-                        'pnr'          => $booking->pnr_id,
-                        'paid_amount'  => $paidAmount,
-                        'currency'     => 'BDT',
+                    'amount' => $paidAmount,
+                    'status' => 'pending',
+                    'reference' => 'Booking Cancelled - #' . $booking->code,
+                    'remarks' => 'Booking cancelled. PNR: ' . $booking->pnr_id,
+                    'deposit_date' => now(),
+                    'meta' => json_encode([
+                        'pnr' => $booking->pnr_id,
+                        'paid_amount' => $paidAmount,
+                        'currency' => 'BDT',
                         'cancelled_at' => now()->toDateTimeString(),
                         'cancelled_by' => $cancelledBy ?? auth()->id(),
-                        'source'       => $booking->source,
+                        'source' => $booking->source,
                         'gds_response' => $gdsResponse,
                     ]),
                     'create_user' => $cancelledBy ?? auth()->id(),
@@ -2878,27 +3201,27 @@ dd($result);
 
                 Log::info('💳 Refund Transaction Created', [
                     'booking_id' => $booking->id,
-                    'amount'     => $paidAmount,
+                    'amount' => $paidAmount,
                 ]);
 
             } else {
                 Log::info('ℹ️ No transaction — paid is 0 or no user', [
                     'booking_id' => $booking->id,
-                    'paid'       => $paidAmount,
-                    'user_id'    => $booking->user_id,
+                    'paid' => $paidAmount,
+                    'user_id' => $booking->customer_id,
                 ]);
             }
 
             DB::commit();
 
             Log::info('✅✅✅ Booking Cancelled Successfully', [
-                'booking_id'         => $booking->id,
-                'pnr'                => $booking->pnr_id,
-                'source'             => $booking->source,
+                'booking_id' => $booking->id,
+                'pnr' => $booking->pnr_id,
+                'source' => $booking->source,
                 'passengers_updated' => $updatedPassengers,
-                'refund_created'     => $paidAmount > 0,
-                'refund_amount'      => $paidAmount,
-                'auto_cancelled'     => $isAuto,
+                'refund_created' => $paidAmount > 0,
+                'refund_amount' => $paidAmount,
+                'auto_cancelled' => $isAuto,
             ]);
 
             $msg = "Booking cancelled successfully!\nPNR: {$booking->pnr_id}\nPassengers updated: {$updatedPassengers}";
@@ -2906,7 +3229,6 @@ dd($result);
                 $msg .= "\nRefund of ৳" . number_format($paidAmount, 2) . " queued for review.";
             }
 
-            // Auto cancel (Job থেকে call) হলে true return করো
             if ($isAuto) {
                 return true;
             }
@@ -2917,314 +3239,22 @@ dd($result);
             DB::rollBack();
             Log::error('❌ Booking Not Found', ['booking_id' => $id]);
 
-            if ($isAuto) {
-                throw $e; // Job retry করবে
-            }
+            if ($isAuto) throw $e;
             return redirect()->back()->with('error', 'Booking not found.');
 
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('❌❌❌ Booking Cancellation Failed', [
-                'booking_id' => $id,
-                'error'      => $e->getMessage(),
-                'line'       => $e->getLine(),
-                'file'       => $e->getFile(),
-            ]);
-
-            if ($isAuto) {
-                throw $e; // Job retry করবে
-            }
-            return redirect()->back()->with('error', 'Cancellation failed: ' . $e->getMessage());
-        }
-    }
-
-    public function cancelBookingold($id, $cancelledBy = null)
-    {
-        Log::info('🔴 Cancel Booking Request Started', [
-            'booking_id' => $id,
-            'by'         => auth()->id(),
-        ]);
-
-        try {
-            DB::beginTransaction();
-
-            /* ── 1. Load booking ──────────────────────────────── */
-            $booking = Booking::with(['passengers'])->findOrFail($id);
-
-            /* ── 2. Guard: already cancelled ─────────────────── */
-            if ($booking->status === 'cancelled') {
-                throw new \Exception('This booking is already cancelled.');
-            }
-
-            /* ── 3. Guard: allowed statuses ──────────────────── */
-            $cancellable = ['pending', 'pnr_pending', 'booked', 'ticketed', 'completed'];
-            if (!in_array($booking->status, $cancellable)) {
-                throw new \Exception(
-                    'Booking cannot be cancelled. Current status: ' . $booking->status
-                );
-            }
-
-            /* ── 4. Guard: must have PNR ─────────────────────── */
-            if (!$booking->pnr_id) {
-                throw new \Exception('No PNR found for this booking.');
-            }
-
-            Log::info('📦 Booking Found', [
-                'booking_id' => $booking->id,
-                'pnr'        => $booking->pnr_id,
-                'source'     => $booking->source,
-                'status'     => $booking->status,
-                'paid'       => $booking->paid,
-                'passengers' => $booking->passengers->count(),
-            ]);
-
-            /* ── 5. GDS cancellation ─────────────────────────── */
-//            $gdsResponse = null;
-
-            if ($booking->source === 'sabre') {
-//return $booking->pnr_id;
-                $sabreService = new \App\Service\SabreApiService();
-                $gdsResponse  = $sabreService->cancelBooking($booking->pnr_id);
-//dd($gdsResponse);
-//return $gdsResponse;
-                Log::info('📥 Sabre Cancel Response', ['response' => $gdsResponse]);
-
-                if (!$gdsResponse || (isset($gdsResponse['status']) && $gdsResponse['status'] === 'error')) {
-                    throw new \Exception(
-                        'Sabre cancellation failed: ' . ($gdsResponse['message'] ?? 'Unknown error')
-                    );
-                }
-
-            } elseif ($booking->source === 'travelport') {
-
-//                $travelportService = new \App\Service\TravelPortBookingXmlService();
-//                $gdsResponse       = $travelportService->cancelBooking($booking->pnr_id);
-//
-//                Log::info('📥 Travelport Cancel Response', ['response' => $gdsResponse]);
-//
-//                if (!$gdsResponse || (isset($gdsResponse['success']) && $gdsResponse['success'] === false)) {
-//                    throw new \Exception(
-//                        'Travelport cancellation failed: ' . ($gdsResponse['message'] ?? 'Unknown error')
-//                    );
-//                }
-
-            } else {
-                throw new \Exception('Unknown booking source: ' . ($booking->source ?? 'null'));
-            }
-
-            /* ── 6. Update booking status ────────────────────── */
-            $cancelNote = 'Cancelled on ' . now()->format('d M Y, h:i A') .
-                ' by ' . (auth()->user()->name ?? 'Admin') .
-                ' (ID: ' . auth()->id() . ')';
-
-            $booking->update([
-                'status'         => 'cancelled',
-                'customer_notes' => $booking->customer_notes
-                    ? $booking->customer_notes . ' | ' . $cancelNote
-                    : $cancelNote,
-            ]);
-
-            /* ── 7. Cancel all passengers ────────────────────── */
-            $updatedPassengers = $booking->passengers()->update([
-                'status' => 'cancelled',
-            ]);
-
-            Log::info('✅ Passengers Cancelled', ['count' => $updatedPassengers]);
-
-            /* ── 8. Transaction — only if paid > 0 ──────────── */
-            $paidAmount = (float) ($booking->paid ?? 0);
-
-            if ($paidAmount > 0 && $booking->user_id) {
-
-                Transaction::create([
-                    'user_id'          => $booking->user_id,
-                    'booking_id'       => $booking->id,
-                    'ref_id'           => $booking->id,
-                    'type'             => 'credit',
-                    'transaction_type' => 'booking_cancelled',
-                    'amount'           => $paidAmount,
-                    'status'           => 'pending',
-                    'reference'        => 'Booking Cancelled - #' . $booking->code,
-                    'remarks'          => 'Booking cancelled. PNR: ' . $booking->pnr_id,
-                    'meta'             => json_encode([
-                        'pnr'          => $booking->pnr_id,
-                        'paid_amount'  => $paidAmount,
-                        'currency'     => 'BDT',
-                        'cancelled_at' => now()->toDateTimeString(),
-                        'cancelled_by' => auth()->id(),
-                        'source'       => $booking->source,
-                        'gds_response' => $gdsResponse,
-                    ]),
-                    'create_user' => auth()->id(),
-                ]);
-
-                Log::info('💳 Refund Transaction Created', [
-                    'booking_id' => $booking->id,
-                    'amount'     => $paidAmount,
-                ]);
-
-            } else {
-                Log::info('ℹ️ No transaction — paid is 0 or no user', [
-                    'booking_id' => $booking->id,
-                    'paid'       => $paidAmount,
-                    'user_id'    => $booking->user_id,
-                ]);
-            }
-
-            DB::commit();
-
-            Log::info('✅✅✅ Booking Cancelled Successfully', [
-                'booking_id'         => $booking->id,
-                'pnr'                => $booking->pnr_id,
-                'source'             => $booking->source,
-                'passengers_updated' => $updatedPassengers,
-                'refund_created'     => $paidAmount > 0,
-                'refund_amount'      => $paidAmount,
-            ]);
-
-            $msg = "Booking cancelled successfully!\nPNR: {$booking->pnr_id}\nPassengers updated: {$updatedPassengers}";
-            if ($paidAmount > 0) {
-                $msg .= "\nRefund of ৳" . number_format($paidAmount, 2) . " queued for review.";
-            }
-
-            return redirect()->back()->with('success', $msg);
-
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            DB::rollBack();
-            Log::error('❌ Booking Not Found', ['booking_id' => $id]);
-            return redirect()->back()->with('error', 'Booking not found.');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('❌❌❌ Booking Cancellation Failed', [
-                'booking_id' => $id,
-                'error'      => $e->getMessage(),
-                'line'       => $e->getLine(),
-                'file'       => $e->getFile(),
-            ]);
-            return redirect()->back()->with('error', 'Cancellation failed: ' . $e->getMessage());
-        }
-    }
-
-    public function cancelTickets($id)
-    {
-        Log::info('🔴 Cancel Ticket Request Started', [
-            'booking_id' => $id,
-            'admin_id' => auth()->id()
-        ]);
-
-        try {
-            DB::beginTransaction();
-
-            $booking = Booking::with(['passengers'])->findOrFail($id);
-
-            // ✅ Validate booking status
-            if (!in_array($booking->status, ['ticketed', 'completed', 'booked'])) {
-                throw new \Exception('Booking cannot be cancelled. Current status: ' . $booking->status);
-            }
-
-            // ✅ Check PNR
-            if (!$booking->pnr_id) {
-                throw new \Exception('No PNR found for this booking');
-            }
-
-            // ✅ Check if already cancelled
-            if ($booking->status === 'cancelled') {
-                throw new \Exception('This booking is already cancelled');
-            }
-
-            Log::info('📦 Booking Found', [
-                'booking_id' => $booking->id,
-                'pnr' => $booking->pnr_id,
-                'status' => $booking->status,
-                'passengers' => $booking->passengers->count()
-            ]);
-
-            if ($booking->source === 'sabre') {
-                // ✅ Call Sabre Cancel API
-                $sabreService = new \App\Service\SabreApiService();
-                $sabreResponse = $sabreService->cancelBooking($booking->pnr_id);
-                Log::info('📥 Sabre Response Received', [
-                    'response' => $sabreResponse
-                ]);
-            }
-
-            // ✅ Validate Sabre response
-            if (!$sabreResponse || (isset($sabreResponse['status']) && $sabreResponse['status'] === 'error')) {
-                throw new \Exception('Failed to cancel booking in Sabre: ' . ($sabreResponse['message'] ?? 'Unknown error'));
-            }
-
-            // ✅ Update booking status
-            $booking->update([
-                'status' => 'cancelled',
-                'customer_notes' => ($booking->customer_notes ? $booking->customer_notes . ' | ' : '') .
-                    'Cancelled on ' . now()->format('d M Y, h:i A') . ' by ' . (auth()->user()->name ?? 'Admin')
-            ]);
-
-            // ✅ Update all passengers
-            $updatedPassengers = $booking->passengers()->update([
-                'status' => 'cancelled'
-            ]);
-
-            Log::info('✅ Passengers Updated', [
-                'count' => $updatedPassengers
-            ]);
-
-            // ✅ Create transaction record (for refund tracking)
-            if ($booking->user_id) {
-                Transaction::create([
-                    'user_id' => $booking->user_id,
-                    'booking_id' => $booking->id,
-                    'ref_id' => $booking->id,
-                    'type' => 'credit',
-                    'transaction_type' => 'booking_cancelled',
-                    'amount' => 0, // Will be updated when refund is processed
-                    'status' => 'pending',
-                    'reference' => 'Booking cancelled - #' . $booking->id,
-                    'remarks' => 'Ticket cancelled. PNR: ' . $booking->pnr_id,
-                    'meta' => json_encode([
-                        'pnr' => $booking->pnr_id,
-                        'cancelled_at' => now()->toDateTimeString(),
-                        'cancelled_by' => auth()->id(),
-                        'sabre_response' => $sabreResponse
-                    ]),
-                    'create_user' => auth()->id(),
-                    'created_at' => now(),
-                ]);
-            }
-
-            DB::commit();
-
-            Log::info('✅✅✅ Ticket Cancelled Successfully', [
-                'booking_id' => $booking->id,
-                'pnr' => $booking->pnr_id,
-                'passengers_updated' => $updatedPassengers
-            ]);
-
-            return redirect()->back()->with('success',
-                "Ticket cancelled successfully!\n\nPNR: {$booking->pnr_id}\nPassengers: {$updatedPassengers}"
-            );
-
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            DB::rollBack();
-            Log::error('❌ Booking Not Found', [
-                'booking_id' => $id
-            ]);
-            return redirect()->back()->with('error', 'Booking not found');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('❌❌❌ Ticket Cancellation Failed', [
                 'booking_id' => $id,
                 'error' => $e->getMessage(),
                 'line' => $e->getLine(),
-                'file' => $e->getFile()
+                'file' => $e->getFile(),
             ]);
 
-            return redirect()->back()->with('error', 'Failed to cancel ticket: ' . $e->getMessage());
+            if ($isAuto) throw $e;
+            return redirect()->back()->with('error', 'Cancellation failed: ' . $e->getMessage());
         }
     }
-
 
 //    public function cancelTickets($id) {
 //        $booking = Booking::where('id', $id)->first();

@@ -8,6 +8,8 @@ use Modules\Booking\Admin\AllBookingController;
 
 // ✅ Booking Management
 Route::group(['prefix' => 'bookings'], function () {
+    Route::get('/datatable', [\Modules\Booking\Admin\BookingManagementController::class, 'datatable'])
+        ->name('admin.bookings.datatable');
     Route::get('/', [\Modules\Booking\Admin\BookingManagementController::class, 'index'])->name('bookings.index');
     Route::get('/{id}', [\Modules\Booking\Admin\BookingManagementController::class, 'show'])->name('admin.bookings.show');
     Route::post('/{id}/set-paid', [\Modules\Booking\Admin\BookingManagementController::class, 'setPaid'])->name('admin.bookings.setPaid');
@@ -50,6 +52,8 @@ Route::put('/bookings/{id}',             [\Modules\Booking\Admin\BookingManageme
 
 Route::post('/bookings/{id}/duplicate',  [\Modules\Booking\Admin\BookingManagementController::class, 'duplicate'])
     ->name('admin.bookings.duplicate');
+
+
 
 
 Route::group(['prefix' => 'all-booking',], function () {

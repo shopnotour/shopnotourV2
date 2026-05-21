@@ -47,7 +47,7 @@ class SabreBookingResponseService
                 'transaction_id'    => strtoupper(md5($bookingId . microtime())),
                 'response_time'     => 0,
 
-                'booking_id'        => $bookingId,
+                'booking_id' => $response['request']['confirmationId'] ?? $response['bookingId'],
                 'start_date'        => $response['startDate']       ?? '',
                 'end_date'          => $response['endDate']         ?? '',
                 'is_cancelable'     => $response['isCancelable']    ?? false,

@@ -22,48 +22,445 @@ use mysql_xdevapi\Result;
 class BookingManagementController extends Controller
 {
 
+//    public function index(Request $request)
+//    {
+//        $query = Booking::with(['user', 'passengers', 'issuedBy'])
+//            ->orderBy('created_at', 'desc');
+//
+//        // status explicitly request এ আছে কিনা check
+//        $statusRequested = $request->has('status');
+//        $selectedStatus  = $request->input('status', 'booked');
+//
+//        if ($statusRequested && $request->filled('status')) {
+//            // specific status select করা হয়েছে
+//            $query->where('status', $selectedStatus);
+//        } elseif ($statusRequested && !$request->filled('status')) {
+//            // "All" select করা হয়েছে (status= খালি) — cancelled + pnr_pending বাদ
+//            $selectedStatus = '';
+//            $query->whereNotIn('status', ['cancelled', 'pnr_pending']);
+//        } else {
+//            // কোনো request নেই — default booked
+//             $query->whereIn('status', ['booked','issue_request']);
+//        }
+//
+//        // Date range filter
+//        $dateColumn = in_array($request->date_column, [
+//            'booking_date', 'confirmed_at', 'ticket_issued_at', 'booking_cancel_at'
+//        ]) ? $request->date_column : 'booking_date';
+//
+//        if ($request->filled('date_from')) {
+//            $query->whereDate($dateColumn, '>=', $request->date_from);
+//        }
+//        if ($request->filled('date_to')) {
+//            $query->whereDate($dateColumn, '<=', $request->date_to);
+//        }
+//
+//        $rows          = $query->paginate(50)->withQueryString();
+//        $dateFrom      = $request->date_from;
+//        $dateTo        = $request->date_to;
+//        $dateColumnSel = $dateColumn;
+//
+//        return view('Booking::admin.bookings.index', compact(
+//            'rows', 'selectedStatus', 'dateFrom', 'dateTo', 'dateColumnSel'
+//        ));
+//    }
+
+
     public function index(Request $request)
     {
-        $query = Booking::with(['user', 'passengers', 'issuedBy'])
-            ->orderBy('created_at', 'desc');
-
-        // status explicitly request এ আছে কিনা check
-        $statusRequested = $request->has('status');
-        $selectedStatus  = $request->input('status', 'booked');
-
-        if ($statusRequested && $request->filled('status')) {
-            // specific status select করা হয়েছে
-            $query->where('status', $selectedStatus);
-        } elseif ($statusRequested && !$request->filled('status')) {
-            // "All" select করা হয়েছে (status= খালি) — cancelled + pnr_pending বাদ
-            $selectedStatus = '';
-            $query->whereNotIn('status', ['cancelled', 'pnr_pending']);
-        } else {
-            // কোনো request নেই — default booked
-             $query->whereIn('status', ['booked','issue_request']);
-        }
-
-        // Date range filter
-        $dateColumn = in_array($request->date_column, [
-            'booking_date', 'confirmed_at', 'ticket_issued_at', 'booking_cancel_at'
-        ]) ? $request->date_column : 'booking_date';
-
-        if ($request->filled('date_from')) {
-            $query->whereDate($dateColumn, '>=', $request->date_from);
-        }
-        if ($request->filled('date_to')) {
-            $query->whereDate($dateColumn, '<=', $request->date_to);
-        }
-
-        $rows          = $query->paginate(50)->withQueryString();
-        $dateFrom      = $request->date_from;
-        $dateTo        = $request->date_to;
-        $dateColumnSel = $dateColumn;
-
-        return view('Booking::admin.bookings.index', compact(
-            'rows', 'selectedStatus', 'dateFrom', 'dateTo', 'dateColumnSel'
-        ));
+        // শুধু view — data নেই
+        return view('Booking::admin.bookings.index');
     }
+
+
+    public function datatable(Request $request)
+    {
+        \DB::enableQueryLog();
+
+        try {
+            $query = Booking::with(['user', 'passengers', 'issuedBy'])
+                ->select('bravo_bookings.*');
+
+            // ── PNR Search (সব status, date bypass) ─────────────
+            $pnrSearch = trim($request->input('pnr_search', ''));
+
+            if ($pnrSearch !== '') {
+                $query->where(function ($q) use ($pnrSearch) {
+                    $q->where('pnr_id',        'like', '%' . $pnrSearch . '%')
+                        ->orWhere('code',         'like', '%' . $pnrSearch . '%')
+                        ->orWhere('ticket_number','like', '%' . $pnrSearch . '%');
+                });
+
+            } else {
+                // ── Status Filter ────────────────────────────────
+                $status = $request->input('status'); // null বা string
+                if (!empty($status)) {
+                    $query->where('status', $status);
+                } else {
+                    $query->where('status', '!=', 'cancelled');
+                }
+
+                // ── Date Filter ──────────────────────────────────
+                $allowedCols = ['booking_date', 'confirmed_at', 'ticket_issued_at', 'created_at'];
+                $dateCol     = in_array($request->date_column, $allowedCols)
+                    ? $request->date_column
+                    : 'created_at';
+
+                $dateFrom = $request->filled('date_from')
+                    ? $request->date_from
+                    : now()->subMonths(2)->toDateString();
+
+                $dateTo = $request->filled('date_to')
+                    ? $request->date_to
+                    : now()->toDateString();
+
+                $query->whereDate($dateCol, '>=', $dateFrom)
+                    ->whereDate($dateCol, '<=', $dateTo);
+            }
+
+            // ── Total count (before global search) ───────────────
+            $totalRecords = (clone $query)->count();
+            \Log::info('DATATABLE DEBUG', [
+                'totalRecords' => $totalRecords,
+                'queries'      => \DB::getQueryLog(),
+                'request'      => $request->all(),
+            ]);
+
+            // ── Global Search ─────────────────────────────────────
+            $search = $request->input('search.value', '');
+            if ($search !== '') {
+                $query->where(function ($q) use ($search) {
+                    $q->where('code',        'like', "%$search%")
+                        ->orWhere('first_name', 'like', "%$search%")
+                        ->orWhere('last_name',  'like', "%$search%")
+                        ->orWhere('email',      'like', "%$search%")
+                        ->orWhere('phone',      'like', "%$search%")
+                        ->orWhere('pnr_id',    'like', "%$search%")
+                        ->orWhere('airline',   'like', "%$search%")
+                        ->orWhere('flight_from','like', "%$search%")
+                        ->orWhere('flight_to', 'like', "%$search%")
+                        ->orWhere('ticket_number','like', "%$search%");
+                });
+            }
+
+            $filteredRecords = (clone $query)->count();
+
+            // ── Ordering ──────────────────────────────────────────
+            $orderCol = (int) $request->input('order.0.column', 1);
+            $orderDir = $request->input('order.0.dir', 'desc') === 'asc' ? 'asc' : 'desc';
+
+            // ── Per-column search ─────────────────────────────────────
+            $colMap = [
+                'col_code'     => 'code',
+                'col_customer' => ['first_name', 'last_name', 'email', 'phone'],
+                'col_source'   => 'source',
+                'col_type'     => 'flight_type',
+                'col_route'    => ['flight_from', 'flight_to'],
+                'col_airline'  => 'airline',
+                'col_pnr'      => ['pnr_id', 'ticket_number'],
+                'col_status'   => 'status',
+            ];
+
+            foreach ($colMap as $param => $cols) {
+                $val = trim($request->input($param, ''));
+                if ($val === '') continue;
+
+                $query->where(function ($q) use ($cols, $val) {
+                    if (is_array($cols)) {
+                        foreach ($cols as $i => $col) {
+                            $i === 0
+                                ? $q->where($col, 'like', "%$val%")
+                                : $q->orWhere($col, 'like', "%$val%");
+                        }
+                    } else {
+                        $q->where($cols, 'like', "%$val%");
+                    }
+                });
+            }
+
+            $orderByCol = $colMap[$orderCol] ?? 'id';
+            $query->orderByRaw("CASE WHEN status = 'issue_request' THEN 0 ELSE 1 END ASC")
+                ->orderBy($orderByCol, $orderDir);
+
+            // ── Paginate ──────────────────────────────────────────
+            $start  = max(0, (int) $request->input('start', 0));
+            $length = max(1, (int) $request->input('length', 50));
+            $rows   = $query->offset($start)->limit($length)->get();
+
+            // ── Build rows ────────────────────────────────────────
+            $data = $rows->map(function ($booking, $i) use ($start) {
+                return [
+                    'DT_RowId'     => 'row_' . $booking->id,
+                    'checkbox'     => '<input type="checkbox" class="check-item" value="' . $booking->id . '">',
+                    'serial'       => $start + $i + 1,
+                    'code'         => $this->buildCode($booking),
+                    'customer'     => $this->buildCustomer($booking),
+                    'source'       => $this->buildSource($booking),
+                    'type'         => $this->buildType($booking),
+                    'route'        => $this->buildRoute($booking),
+                    'airline'      => e($booking->airline ?? '—'),
+                    'pnr_tkt'      => $this->buildPnrTkt($booking),
+                    'payment'      => $this->buildPayment($booking),
+                    'status'       => $this->buildStatus($booking),
+                    'issued_at'    => $this->buildDate($booking->ticket_issued_at, 'success'),
+                    'issued_by'    => $booking->issuedBy
+                        ? '<span class="badge badge-light"><i class="fa fa-user"></i> ' . e($booking->issuedBy->name) . '</span>'
+                        : '<span class="text-muted">—</span>',
+                    'cancel_date'  => $this->buildDate($booking->booking_date, 'danger'),
+                    'booking_date' => $this->buildDate($booking->confirmed_at, 'success'),
+                    'actions'      => $this->buildActions($booking),
+                ];
+            });
+
+            return response()->json([
+                'draw'            => (int) $request->input('draw', 1),
+                'recordsTotal'    => $totalRecords,
+                'recordsFiltered' => $filteredRecords,
+                'data'            => $data,
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Datatable error: ' . $e->getMessage(), [
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
+            return response()->json([
+                'draw'            => (int) $request->input('draw', 1),
+                'recordsTotal'    => 0,
+                'recordsFiltered' => 0,
+                'data'            => [],
+                'error'           => 'Server error: ' . $e->getMessage(), // dev only
+            ], 200); // 200 so DataTable shows the error message
+        }
+    }
+
+
+// ═══════════════════════════════════════════════════════════
+// buildActions() — replace your existing method with this
+// missing routes এর জন্য try-catch দেওয়া আছে
+// ═══════════════════════════════════════════════════════════
+
+    private function buildActions($b): string
+    {
+        $canDetail    = auth()->user()->hasPermission('booking_details');
+        $canEdit      = auth()->user()->hasPermission('booking_pnr_edit');
+        $canSetPaid   = auth()->user()->hasPermission('booking_setpaid');
+        $canPnrEdit   = auth()->user()->hasPermission('booking_pnr_edit');
+        $canPnrCheck  = auth()->user()->hasPermission('booking_pnr_check');
+        $canIssue     = auth()->user()->hasPermission('booking_issue_ticket');
+        $canCancel    = auth()->user()->hasPermission('booking_cancel');
+        $canTktCancel = auth()->user()->hasPermission('booking_cancel_ticket');
+        $canPrint     = auth()->user()->hasPermission('booking_print_ticket');
+
+        $id   = $b->id;
+        $code = e($b->code ?? '#' . $b->id);
+
+        // ── Safe route helper — missing route এ crash করবে না ──
+        $r = function (string $name, $params = []) {
+            try {
+                return route($name, $params);
+            } catch (\Exception $e) {
+                return '#route-missing-' . $name;
+            }
+        };
+
+        $html  = '<div class="dropdown">';
+        $html .= '<button class="btn btn-sm btn-secondary dropdown-toggle px-2 py-1" type="button" data-toggle="dropdown">';
+        $html .= '<i class="fa fa-ellipsis-v"></i></button>';
+        $html .= '<div class="dropdown-menu dropdown-menu-right shadow" style="min-width:190px">';
+
+        // ── View Detail ──────────────────────────────────────────
+        if ($canDetail)
+            $html .= '<a class="dropdown-item btn-detail-booking" href="#"
+                     data-ajax="' . $r('booking.modal', $id) . '"
+                     data-toggle="modal" data-id="' . $id . '"
+                     data-target="#modal_booking_detail">
+                     <i class="fa fa-eye text-info"></i> View Detail</a>';
+
+        // ── Edit Booking ─────────────────────────────────────────
+        if ($canEdit)
+            $html .= '<a class="dropdown-item" href="' . $r('admin.bookings.edit', $id) . '">
+                     <i class="fa fa-edit text-warning"></i> Edit Booking</a>';
+
+        // ── Duplicate ─────────────────────────────────────────────
+        if ($canEdit)
+            $html .= '<a class="dropdown-item btn-duplicate-booking" href="#"
+                     data-id="' . $id . '" data-code="' . $code . '">
+                     <i class="fa fa-copy text-primary"></i> Duplicate</a>';
+
+        $html .= '<div class="dropdown-divider"></div>';
+
+        // ── Set Paid ──────────────────────────────────────────────
+        if ($canSetPaid)
+            $html .= '<a class="dropdown-item btn-set-paid-open" href="#"
+                     data-id="' . $id . '"
+                     data-code="' . $code . '"
+                     data-total="' . ($b->total ?? 0) . '"
+                     data-paid="' . ($b->paid ?? 0) . '"
+                     data-credit="' . ($b->user->credit_balance ?? 0) . '">
+                     <i class="fa fa-money text-success"></i> Set Paid</a>';
+
+        // ── Edit PNR / Source / Status ───────────────────────────
+        if ($canPnrEdit)
+            $html .= '<a class="dropdown-item btn-pnr-edit" href="#"
+                     data-id="' . $id . '"
+                     data-pnr="' . e($b->pnr_id ?? '') . '"
+                     data-source="' . e($b->source ?? '') . '"
+                     data-status="' . e($b->status ?? '') . '"
+                     data-code="' . $code . '">
+                     <i class="fa fa-barcode"></i> Edit PNR/Source</a>';
+
+        $html .= '<div class="dropdown-divider"></div>';
+
+        // ── Issue Ticket ──────────────────────────────────────────
+        if ($canIssue)
+            $html .= '<a class="dropdown-item"
+                     href="' . $r('report.admin.booking.issueTicket', ['id' => $id]) . '">
+                     <i class="fa fa-ticket text-success"></i> Issue Ticket</a>';
+
+        // ── PNR Check ─────────────────────────────────────────────
+        if ($canPnrCheck)
+            $html .= '<a class="dropdown-item"
+                     href="' . $r('admin.booking.pnrcheck', ['id' => $id]) . '">
+                     <i class="fa fa-search"></i> PNR Check</a>';
+
+        // ── Booking Cancel ────────────────────────────────────────
+        // status check পরে যোগ হবে: && $b->status == 'booked'
+        if ($canCancel)
+            $html .= '<a class="dropdown-item text-warning btn-booking-cancel" href="#"
+                     data-id="' . $id . '"
+                     data-code="' . $code . '"
+                     data-url="' . $r('booking.cancel', $id) . '">
+                     <i class="fa fa-ban"></i> Booking Cancel</a>';
+
+        // ── Ticket Cancel ─────────────────────────────────────────
+        // status check পরে: && in_array($b->status, ['ticketed','issued','completed'])
+        if ($canTktCancel)
+            $html .= '<a class="dropdown-item text-danger btn-ticket-cancel" href="#"
+                     data-id="' . $id . '"
+                     data-code="' . $code . '"
+                     data-paid="' . ($b->paid ?? 0) . '">
+                     <i class="fa fa-times-circle"></i> Ticket Cancel</a>';
+
+        // ── Print Ticket ──────────────────────────────────────────
+        // status check পরে: && in_array($b->status, ['issued','completed'])
+        if ($canPrint)
+            $html .= '<div class="dropdown-divider"></div>
+                  <a class="dropdown-item"
+                     href="' . $r('report.admin.booking.ticket', ['id' => $id]) . '"
+                     target="_blank">
+                     <i class="fa fa-print"></i> Print Ticket</a>';
+
+        $html .= '</div></div>';
+
+        return $html;
+    }
+
+// ── Helper Methods ──────────────────────────────────────────
+
+    private function buildCode($b)
+    {
+        return '<strong class="text-primary" style="font-size:12px">'
+            . ($b->code ?? '#'.$b->id) . '</strong>';
+    }
+
+    private function buildCustomer($b)
+    {
+        $notes = $b->customer_notes
+            ? '<div class="text-muted" style="font-size:11px"><i class="fa fa-sticky-note fa-fw"></i>'
+            . \Str::limit($b->customer_notes, 40) . '</div>'
+            : '';
+        return '<div class="fw-semibold" style="font-size:13px">'.$b->first_name.' '.$b->last_name.'</div>
+            <div class="text-muted" style="font-size:11px">
+                <i class="fa fa-envelope fa-fw"></i>'.$b->email.'<br>
+                <i class="fa fa-phone fa-fw"></i>'.$b->phone.'
+            </div>'.$notes;
+    }
+
+    private function buildSource($b)
+    {
+        $colors = ['sabre'=>'primary','travelport'=>'info','galileo'=>'warning',
+            'amadeus'=>'success','manual'=>'secondary'];
+        $color = $colors[$b->source] ?? 'secondary';
+        return '<span class="badge badge-'.$color.' badge-sm">'.ucfirst($b->source).'</span>';
+    }
+
+    private function buildType($b)
+    {
+        return '<span class="badge badge-light badge-sm" style="font-size:10px">'
+            . ucfirst(str_replace('_',' ',$b->flight_type)) . '</span>';
+    }
+
+    private function buildRoute($b)
+    {
+        return '<span class="fw-semibold" style="font-size:13px">'
+            . $b->flight_from
+            . ' <i class="fa fa-long-arrow-right text-muted mx-1"></i> '
+            . $b->flight_to . '</span>';
+    }
+
+    private function buildPnrTkt($b)
+    {
+        $tickets = $b->ticket_number ? json_decode($b->ticket_number, true) : [];
+        $tktHtml = !empty($tickets)
+            ? '<small>'.implode(', ', array_slice($tickets,0,2)).(count($tickets)>2?'…':'').'</small>'
+            : '<span class="text-muted">—</span>';
+        return '<div style="font-size:12px">
+                <span class="text-muted">PNR:</span>
+                <strong class="text-primary">'.($b->pnr_id ?? 'N/A').'</strong>
+            </div>
+            <div style="font-size:12px">
+                <span class="text-muted">TKT:</span> '.$tktHtml.'
+            </div>';
+    }
+
+    private function buildPayment($b)
+    {
+        $due = $b->total - $b->paid;
+        $dueHtml = $due > 0
+            ? '<div><span class="text-muted">Due:</span>
+           <span class="text-danger">'.format_money_main($due).'</span></div>'
+            : '';
+        return '<div style="font-size:12px">
+                <div><span class="text-muted">Total:</span>
+                    <span class="text-primary fw-semibold">'.format_money_main($b->total).'</span></div>
+                <div><span class="text-muted">Paid:</span>
+                    <span class="text-success">'.format_money_main($b->paid).'</span></div>
+                '.$dueHtml.'
+            </div>';
+    }
+
+    private function buildStatus($b)
+    {
+        $colors = [
+            'pending'          => 'warning',
+            'pnr_pending'      => 'secondary',   // ← যোগ করো
+            'paid'             => 'info',
+            'booked'           => 'primary',
+            'issued'           => 'success',
+            'issue_request'    => 'issue-request',
+            'ticketed'         => 'success',
+            'completed'        => 'success',
+            'cancelled'        => 'danger',
+            'failed'           => 'danger',
+            'refunded'         => 'secondary',
+            'voided'           => 'dark',         // ← যোগ করো
+            'partial_refunded' => 'warning',      // ← যোগ করো
+            'partial_reissued' => 'info',         // ← যোগ করো
+        ];
+        $color = $colors[$b->status] ?? 'secondary';
+        return '<span class="badge badge-'.$color.'" style="font-size:11px">'
+            . ucfirst(str_replace('_',' ',$b->status)) . '</span>';
+    }
+
+    private function buildDate($dateVal, $colorClass)
+    {
+        if (!$dateVal) return '<span class="text-muted">—</span>';
+        $dt = \Carbon\Carbon::parse($dateVal);
+        return '<span class="text-'.$colorClass.'" style="font-size:11px">'
+            . $dt->format('d M Y') . '<br><small>'.$dt->format('h:i A').'</small></span>';
+    }
+
 
 // ─────────────────────────────────────────────────────────────────
 // NEW: duplicate()

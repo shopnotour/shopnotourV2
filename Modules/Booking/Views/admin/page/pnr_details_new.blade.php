@@ -117,9 +117,14 @@
                 $accountingItems= $b['accounting_items'] ?? [];
                 $specialServices= $b['special_services'] ?? [];
                 $remarks        = $b['remarks'] ?? [];
-                $adultCount     = collect($passengers)->where('traveler_type','ADT')->count();
+                $adultCount = collect($passengers)->where('traveler_type','ADT')->count();
                 $childCount     = collect($passengers)->where('traveler_type','CNN')->count();
                 $infantCount    = collect($passengers)->where('traveler_type','INF')->count();
+
+                $paxStr = $adultCount . 'A';
+                if ($childCount > 0)  $paxStr .= ' + ' . $childCount . 'C';
+                if ($infantCount > 0) $paxStr .= ' + ' . $infantCount . 'I';
+
                 $originSeg      = $segments[0] ?? [];
                 $lastSeg        = !empty($segments) ? end($segments) : [];
                 $firstAirport   = $originSeg['origin']      ?? 'N/A';
@@ -178,7 +183,7 @@
                     </div>
                     <div class="px-4 py-4 text-center">
                         <div class="text-xs text-slate-400 uppercase tracking-widest font-medium mb-1">Passengers</div>
-                        <div class="font-bold text-slate-800 text-sm">{{ $adultCount }}A@if($childCount > 0) + {{ $childCount }}C@endif@if($infantCount > 0) + {{ $infantCount }}I@endif</div>
+                        <div class="font-bold text-slate-800 text-sm">{{ $paxStr }}</div>
                     </div>
                     <div class="px-4 py-4 text-center">
                         <div class="text-xs text-slate-400 uppercase tracking-widest font-medium mb-1">PCC / Agent</div>

@@ -23,6 +23,7 @@ use Illuminate\Http\Request;
 use Modules\Location\Models\Location;
 use Modules\Review\Models\Review;
 use Modules\Core\Models\Attributes;
+use Modules\Flight\Models\Airline;
 use DB;
 use Illuminate\Support\Facades\Log;
 
@@ -150,6 +151,7 @@ class FlightController extends Controller
 
     public function index(Request $request)
     {
+//return $request;
         $reissueParams = session('reissue_search_params');
 
         if ($reissueParams) {
@@ -198,12 +200,24 @@ class FlightController extends Controller
             }
         }
 
+        if ($request->has('airline_codes') && !empty($request->input('airline_codes'))) {
+            $validated['airline_codes'] = $request->input('airline_codes');
+        }
+
         session(['flight_search_params' => $validated]);
         SearchSession::log($validated);
 
         // ✅ Streaming response (AJAX/JSON request)
         if ($request->expectsJson() || $request->ajax()) {
             return response()->stream(function () use ($validated) {
+
+                echo "data: " . json_encode([
+                        '__meta' => true,
+                        'isReissue'      => isset($validated['reissue_id']) && !empty($validated['reissue_id']),
+                        'reissueAirline' => $validated['airline_codes'] ?? null,
+                    ]) . "\n\n";
+                ob_flush();
+                flush();
 
                 $this->flightSearch->searchStream($validated, function ($flight) {
                     echo "data: " . json_encode($flight) . "\n\n";
@@ -225,13 +239,56 @@ class FlightController extends Controller
 
         // ✅ Normal page load
         return response()->view('Flight::frontend.vueSearch.flight_search', [
-            'flights'      => [],
-            'searchParams' => $validated,
+            'flights'        => [],
+            'searchParams'   => $validated,
+            'isReissue'      => isset($validated['reissue_id']) && !empty($validated['reissue_id']),
+            'reissueAirline' => $validated['airline_codes'] ?? null,
         ])->withHeaders([
             'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
             'Pragma'        => 'no-cache',
             'Expires'       => '0',
         ]);
+    }
+
+    // In your FlightController.php or relevant controller
+    public function getAirlines(Request $request)
+    {
+        try {
+
+            $airlines = Airline::whereNull('deleted_at')
+                ->orderBy('name')
+                ->get(['id', 'designator', 'name', 'image_id']);
+
+            $airlines->transform(function ($airline) {
+
+                $airline->image_url = null;
+
+                if ($airline->image_id) {
+
+                    // Example Media model
+                    $media = \Modules\Media\Models\MediaFile::find($airline->image_id);
+
+                    if ($media && $media->path) {
+                        $airline->image_url = asset($media->path);
+                    }
+                }
+
+                return $airline;
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $airlines
+            ]);
+
+        } catch (\Exception $e) {
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch airlines',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function getData(Request $request, $id)
@@ -313,7 +370,7 @@ class FlightController extends Controller
         }
 
         $filtered = $flights;
-//return $request;
+        //return $request;
         // 1. Price Range Filter
         if ($request->has('price_range')) {
             $priceRange = explode(';', $request->input('price_range'));

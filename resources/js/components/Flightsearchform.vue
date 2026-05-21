@@ -222,77 +222,208 @@
                  BOTTOM BAR
             ══════════════════════════════════ -->
             <div class="fsf-bottom">
-
-                <!-- Travelers trigger -->
+                <!-- Left side buttons group -->
                 <div class="fsf-bottom-left">
-                    <div class="fsf-pill-btn" @click="toggleTraveler">
+                    <!-- Travelers Button (opens Travelers panel) -->
+                    <div class="fsf-pill-btn" @click="openTravelerPanel">
                         <i class="fa fa-users"></i>
                         <span>{{ totalPassengers }} Traveler{{ totalPassengers !== 1 ? 's' : '' }}</span>
                         <span class="fsf-class-badge">{{ travelClassLabel }}</span>
                     </div>
 
-                    <!-- Travelers Dropdown -->
+                    <!-- Airlines Button -->
+<!--                    <div class="fsf-pill-btn fsf-airlines-btn" @click="openAirlinesPanel">-->
+<!--                        <i class="fa fa-plane"></i>-->
+<!--                        <span>Airlines</span>-->
+<!--                        <span v-if="selectedAirlineDesignator" class="fsf-airline-badge">-->
+<!--                            {{ selectedAirlineDesignator }}-->
+<!--                        </span>-->
+<!--                    </div>-->
+
+                    <div
+                        class="fsf-pill-btn fsf-airlines-btn"
+                        @click="!isReissue && openAirlinesPanel()"
+                        :style="isReissue ? 'cursor: not-allowed; opacity: 0.7;' : ''">
+                        <i class="fa fa-plane"></i>
+                        <span>Airlines</span>
+                        <span v-if="isReissue && reissueAirline" class="fsf-airline-badge">
+                            {{ reissueAirline }} <i class="fa fa-lock" style="font-size:9px; margin-left:3px;"></i>
+                        </span>
+                                            <span v-else-if="selectedAirlineDesignator" class="fsf-airline-badge">
+
+                            {{ selectedAirlineDesignator }}
+                        </span>
+                    </div>
+
+                    <!-- Travelers Panel (No tabs, only travelers content) -->
                     <div v-show="openTraveler" class="fsf-traveler-panel" @click.stop>
-                        <div class="fsf-traveler-header">Passengers & Class</div>
+                        <div class="fsf-traveler-header">
+                            <div class="fsf-traveler-title">
+                                Passengers & Class
+                            </div>
 
-                        <div class="fsf-pax-row">
-                            <div class="fsf-pax-info">
-                                <strong>Adults</strong>
-                                <small>12+ yrs</small>
-                            </div>
-                            <div class="fsf-counter">
-                                <button type="button" @click="adults > 1 && adults--"><i class="fa fa-minus"></i></button>
-                                <span>{{ adults }}</span>
-                                <button type="button" @click="adults++"><i class="fa fa-plus"></i></button>
-                            </div>
-                        </div>
-
-                        <div class="fsf-pax-row">
-                            <div class="fsf-pax-info">
-                                <strong>Children</strong>
-                                <small>2–11 yrs</small>
-                            </div>
-                            <div class="fsf-counter">
-                                <button type="button" @click="removeChild"><i class="fa fa-minus"></i></button>
-                                <span>{{ children }}</span>
-                                <button type="button" @click="addChild"><i class="fa fa-plus"></i></button>
-                            </div>
-                        </div>
-
-                        <div v-if="children > 0" class="fsf-child-ages">
-                            <div v-for="(age, i) in childrenAges" :key="'cage-' + i" class="fsf-age-row">
-                                <label>Child {{ i + 1 }}</label>
-                                <select v-model="childrenAges[i]">
-                                    <option value="">Age?</option>
-                                    <option v-for="y in 10" :key="y" :value="y + 1">{{ y + 1 }} yrs</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="fsf-pax-row">
-                            <div class="fsf-pax-info">
-                                <strong>Infants</strong>
-                                <small>Under 2</small>
-                            </div>
-                            <div class="fsf-counter">
-                                <button type="button" @click="infants > 0 && infants--"><i class="fa fa-minus"></i></button>
-                                <span>{{ infants }}</span>
-                                <button type="button" @click="infants++"><i class="fa fa-plus"></i></button>
-                            </div>
-                        </div>
-
-                        <div class="fsf-class-grid">
                             <button
-                                v-for="cl in classes" :key="cl.value"
                                 type="button"
-                                class="fsf-class-opt"
-                                :class="{ active: travelClass === cl.value }"
-                                @click="travelClass = cl.value">
-                                {{ cl.label }}
+                                class="fsf-close-panel"
+                                @click="closeTraveler">
+                                &times;
                             </button>
                         </div>
 
+                        <!-- Travelers Content Only -->
+                        <div>
+                            <div class="fsf-pax-row">
+                                <div class="fsf-pax-info">
+                                    <strong>Adults</strong>
+                                    <small>12+ yrs</small>
+                                </div>
+                                <div class="fsf-counter">
+                                    <button type="button" @click="adults > 1 && adults--"><i class="fa fa-minus"></i></button>
+                                    <span>{{ adults }}</span>
+                                    <button type="button" @click="adults++"><i class="fa fa-plus"></i></button>
+                                </div>
+                            </div>
+
+                            <div class="fsf-pax-row">
+                                <div class="fsf-pax-info">
+                                    <strong>Children</strong>
+                                    <small>2–11 yrs</small>
+                                </div>
+                                <div class="fsf-counter">
+                                    <button type="button" @click="removeChild"><i class="fa fa-minus"></i></button>
+                                    <span>{{ children }}</span>
+                                    <button type="button" @click="addChild"><i class="fa fa-plus"></i></button>
+                                </div>
+                            </div>
+
+                            <div v-if="children > 0" class="fsf-child-ages">
+                                <div v-for="(age, i) in childrenAges" :key="'cage-' + i" class="fsf-age-row">
+                                    <label>Child {{ i + 1 }}</label>
+                                    <select v-model="childrenAges[i]">
+                                        <option value="">Age?</option>
+                                        <option v-for="y in 10" :key="y" :value="y + 1">{{ y + 1 }} yrs</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="fsf-pax-row">
+                                <div class="fsf-pax-info">
+                                    <strong>Infants</strong>
+                                    <small>Under 2</small>
+                                </div>
+                                <div class="fsf-counter">
+                                    <button type="button" @click="infants > 0 && infants--"><i class="fa fa-minus"></i></button>
+                                    <span>{{ infants }}</span>
+                                    <button type="button" @click="infants++"><i class="fa fa-plus"></i></button>
+                                </div>
+                            </div>
+
+                            <div class="fsf-class-grid">
+                                <button
+                                    v-for="cl in classes" :key="cl.value"
+                                    type="button"
+                                    class="fsf-class-opt"
+                                    :class="{ active: travelClass === cl.value }"
+                                    @click="travelClass = cl.value">
+                                    {{ cl.label }}
+                                </button>
+                            </div>
+                        </div>
+
                         <button type="button" class="fsf-done-btn" @click="closeTraveler">Done</button>
+                    </div>
+
+                    <!-- Airlines Panel (Separate panel, no tabs) -->
+                    <div v-show="openAirlines" class="fsf-airlines-panel-full" @click.stop>
+                        <div class="fsf-traveler-header">
+                            <div class="fsf-airline-title">
+                                Select Airline
+                            </div>
+
+                            <button
+                                type="button"
+                                class="fsf-close-panel"
+                                @click="closeAirlines">
+                                &times;
+                            </button>
+                        </div>
+
+                        <!-- ✅ New: Selected Airline Section with Remove Option -->
+                        <div v-if="selectedAirline" class="fsf-selected-airline">
+                            <div class="fsf-selected-airline-info">
+                                <i class="fa fa-check-circle" style="color: #10b981;"></i>
+                                <span>Selected: <strong>{{ selectedAirline.name }} ({{ selectedAirline.designator }})</strong></span>
+                            </div>
+                            <button
+                                type="button"
+                                class="fsf-remove-airline"
+                                @click.stop.prevent="removeSelectedAirline">
+                                <i class="fa fa-trash-alt"></i>
+                            </button>
+                        </div>
+
+                        <!-- Divider when airline is selected -->
+                        <div v-if="selectedAirline" class="fsf-divider"></div>
+
+                        <div class="fsf-airlines-panel">
+                            <div class="fsf-airlines-search">
+                                <input
+                                    ref="airlineSearchInput"
+                                    type="text"
+                                    v-model="airlineSearch"
+                                    placeholder="Search Airlines..."
+                                    class="fsf-airline-search-input"
+                                    @click.stop>
+                            </div>
+
+
+                            <div class="fsf-airlines-list">
+
+                                <!-- Loading -->
+                                <div v-if="loadingAirlines" class="fsf-al-loading">
+                                    <i class="fa fa-spinner fa-spin"></i> Loading airlines...
+                                </div>
+
+                                <!-- Data -->
+                                <template v-else>
+
+                                    <div
+                                        v-for="airline in filteredAirlines"
+
+                                        :key="airline.id"
+                                        class="fsf-airline-item"
+                                        :class="{ 'selected': selectedAirline && selectedAirline.id === airline.id }"
+                                        @click.stop="selectAirline(airline)">
+
+                                        <div class="fsf-airline-info">
+                                            <div class="fsf-airline-name-row">
+                                                <img
+                                                    v-if="airline.image_url"
+
+                                                    :src="airline.image_url"
+                                                    class="inline-block w-6 h-6 mr-2 rounded-full"
+                                                    style="width: 24px; height: 24px; object-fit: cover;"
+                                                >
+                                                <span class="fsf-airline-name">{{ airline.name }}</span>
+                                                <span class="fsf-airline-code">- {{ airline.designator }}</span>
+                                            </div>
+                                        </div>
+                                        <i v-if="selectedAirline && selectedAirline.id === airline.id"
+                                           class="fa fa-check-circle"
+                                           style="color: #10b981;"></i>
+                                        <i v-else class="fa fa-chevron-right" style="color: #9ca3af;"></i>
+                                    </div>
+
+                                    <!-- Empty state (ONLY after loading) -->
+                                    <div v-if="!loadingAirlines && filteredAirlines.length === 0" class="fsf-al-empty">
+                                        <i class="fa fa-circle-xmark"></i> No airlines found
+                                    </div>
+
+                                </template>
+                            </div>
+                        </div>
+
+                        <button type="button" class="fsf-done-btn" @click="closeAirlines">Done</button>
                     </div>
                 </div>
 
@@ -305,17 +436,6 @@
                         @click="addSegment">
                         <i class="fa fa-plus"></i> Add Flight
                     </button>
-
-                    <!-- Advanced Search toggle -->
-                    <!--                    <button-->
-                    <!--                        type="button"-->
-                    <!--                        class="fsf-adv-toggle"-->
-                    <!--                        :class="{ active: showAdvanced }"-->
-                    <!--                        @click="showAdvanced = !showAdvanced">-->
-                    <!--                        <i class="fa fa-sliders"></i>-->
-                    <!--                        Advanced-->
-                    <!--                        <i class="fa" :class="showAdvanced ? 'fa-chevron-up' : 'fa-chevron-down'"></i>-->
-                    <!--                    </button>-->
                 </div>
 
                 <!-- Search btn -->
@@ -497,6 +617,11 @@ export default {
     name: 'FlightSearchForm',
     components: { AirportList },
 
+    props: {
+        isReissue:      { type: Boolean, default: false },
+        reissueAirline: { type: String,  default: null  },
+    },
+
     data() {
         return {
             isSelectingAirport: false,
@@ -507,6 +632,14 @@ export default {
             hasSessionData:     false,
             sessionSegments:    [],
             isFormVisible:      false,
+            airlines: [],
+            showAirlinesPanel: false,
+            airlineSearch: '',
+            preventAutoSearch: false,
+            selectedAirline: null,
+            openTraveler: false,  // For travelers panel
+            openAirlines: false,  // For airlines panel
+            loadingAirlines: false,
 
             tripTypes: [
                 { value: 'oneway', label: 'One Way',    icon: 'fa fa-arrow-right' },
@@ -536,7 +669,6 @@ export default {
             segments:   [],
             returnDate: '',
 
-            openTraveler: false,
             adults:       1,
             children:     0,
             childrenAges: [],
@@ -606,7 +738,21 @@ export default {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             return today;
-        }
+        },
+        filteredAirlines() {
+            if (!this.airlineSearch) return this.airlines;
+            const search = this.airlineSearch.toLowerCase();
+            return this.airlines.filter(airline =>
+                airline.name.toLowerCase().includes(search) ||
+
+                airline.designator.toLowerCase().includes(search)
+            );
+        },
+        selectedAirlineDesignator() {
+            return this.selectedAirline
+                ? this.selectedAirline.designator
+                : '';
+        },
     },
 
     // watch: {
@@ -707,7 +853,7 @@ export default {
                 const fromCode = firstSegment?.from_display?.split(' - ')[0] || '';
                 const toCode = firstSegment?.to_display?.split(' - ')[0] || '';
                 const route = `${fromCode} → ${toCode}`;
-                
+
                 // Format dates
                 let dates = '';
                 if (this.tripType === 'oneway') {
@@ -719,17 +865,17 @@ export default {
                     dates = `${dep} → ${ret}`;
                 } else if (this.tripType === 'multi') {
                     const first = firstSegment?.departure ? this.formatDisplayDate(firstSegment.departure) : '';
-                    const last = this.segments[this.segments.length - 1]?.departure ? 
+                    const last = this.segments[this.segments.length - 1]?.departure ?
                         this.formatDisplayDate(this.segments[this.segments.length - 1].departure) : '';
                     dates = `${first} → ${last}`;
                 }
-                
+
                 // Format travelers
                 const travelers = `${this.totalPassengers} Traveler${this.totalPassengers !== 1 ? 's' : ''}`;
-                
+
                 // Format class
                 const travelClassLabel = this.classes.find(c => c.value === this.travelClass)?.label || 'Economy';
-                
+
                 // Send to parent window
                 window.postMessage({
                     type: 'flight-search-summary-update',
@@ -1034,13 +1180,23 @@ export default {
         addChild()    { this.children++; this.childrenAges.push(''); },
         removeChild() { if (this.children > 0) { this.children--; this.childrenAges.pop(); } },
         toggleTraveler() { this.openTraveler = !this.openTraveler; },
-        closeTraveler()  { this.openTraveler = false; },
+        closeTraveler() { this.openTraveler = false; },
+        closeAirlines() { this.openAirlines = false; },
 
         // ── Outside click ──
         handleOutsideClick(e) {
-            if (this.activeSearch && !e.target.closest('.fsf-field')) this.activeSearch = null;
-            if (this.openTraveler && !e.target.closest('.fsf-bottom-left')) this.openTraveler = false;
-            if (this.pickerOpen && !e.target.closest('.fsf-date-wrap')) this.closePicker();
+            if (this.activeSearch && !e.target.closest('.fsf-field')) {
+                this.activeSearch = null;
+            }
+            if (this.openTraveler && !e.target.closest('.fsf-pill-btn') && !e.target.closest('.fsf-traveler-panel')) {
+                this.openTraveler = false;
+            }
+            if (this.openAirlines && !e.target.closest('.fsf-airlines-btn') && !e.target.closest('.fsf-airlines-panel-full')) {
+                this.openAirlines = false;
+            }
+            if (this.pickerOpen && !e.target.closest('.fsf-date-wrap')) {
+                this.closePicker();
+            }
         },
 
         // ── Submit ──
@@ -1070,6 +1226,18 @@ export default {
                 p.append(`segments[${i}][departure]`, s.departure);
             });
             if (this.tripType === 'round' && this.returnDate) p.append('return_date', this.returnDate);
+
+            // if (this.selectedAirline && this.selectedAirline.designator) {
+            //     p.append('airline_codes', this.selectedAirline.designator);
+            // }
+
+            const airlineCode = this.isReissue
+                ? this.reissueAirline                          // ✅ reissue হলে সবসময় original
+                : this.selectedAirline?.designator ?? null;    // ✅ normal হলে user choice
+
+            if (airlineCode) {
+                p.append('airline_codes', airlineCode);
+            }
 
             const searchUrl = `${window.flightData?.searchUrl || '/flight'}?${p.toString()}`;
             const isSearchPage = !!document.querySelector('.fsp-wrap');
@@ -1135,6 +1303,18 @@ export default {
 
                         try {
                             const flight = JSON.parse(raw);
+
+                            // ✅ Meta event handle
+                            if (flight.__meta) {
+                                window.dispatchEvent(new CustomEvent('flight-search-meta', {
+                                    detail: {
+                                        isReissue:      flight.isReissue,
+                                        reissueAirline: flight.reissueAirline,
+                                    }
+                                }));
+                                continue;
+                            }
+
                             window.dispatchEvent(new CustomEvent('flight-search-item', { detail: flight }));
                         } catch(e) {}
                     }
@@ -1145,11 +1325,183 @@ export default {
             } catch(e) {
                 console.error('Stream error:', e);
             } finally {
-                // ✅ সবসময় এখানে শেষ হবে
                 this.isSearching = false;
                 window.dispatchEvent(new CustomEvent('flight-search-done'));
             }
         },
+
+        // Fetch all airlines
+        async fetchAirlines() {
+            if (this.airlines.length > 0) return;
+
+            this.loadingAirlines = true;
+
+            try {
+                const response = await fetch('/flight/airlines', {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    this.airlines = result.data;
+                }
+            } catch (error) {
+                console.error('Error fetching airlines:', error);
+            } finally {
+                this.loadingAirlines = false;
+            }
+        },
+
+        // Toggle travelers panel with airlines
+        toggleTravelerWithAirlines() {
+            if (!this.openTraveler) {
+                // Opening the panel - ALWAYS show Travelers tab first
+                this.openTraveler = true;
+                this.showAirlinesPanel = false; // Force show Travelers tab
+
+                // Reset airline search when opening
+                this.airlineSearch = '';
+
+                // Load airlines in background if not already loaded
+                if (this.airlines.length === 0) {
+                    this.fetchAirlines(); // Load in background without showing
+                }
+            } else {
+                // Closing the panel
+                this.openTraveler = false;
+                this.showAirlinesPanel = false;
+            }
+        },
+
+        // Select an airline to filter
+        removeSelectedAirline() {
+            this.selectedAirline = null;
+            this.advAirline = '';
+
+            // Trigger search update without airline filter
+            this.$emit('airline-removed');
+
+        },
+
+        // Select an airline to filter (updated)
+        selectAirline(airline) {
+            // If clicking the same airline that's already selected, remove it
+            if (this.selectedAirline && this.selectedAirline.id === airline.id) {
+                this.removeSelectedAirline();
+                return;
+            }
+
+            this.preventAutoSearch = true;
+            this.advAirline = airline.name;
+            this.selectedAirline = airline;
+
+            // Close airlines panel
+            this.openAirlines = false;
+
+            // trigger search with airline filter
+            this.$emit('airline-selected', airline);
+
+            setTimeout(() => {
+                this.preventAutoSearch = false;
+            }, 500);
+        },
+
+
+        // Clear airline filter from advanced search
+        clearAirlineFilter() {
+            this.selectedAirline = null;
+            this.advAirline = '';
+            this.openAirlines = false;
+            // Trigger search update
+            if (!this.preventAutoSearch) {
+                this.handleSearch();
+            }
+        },
+
+        // Show airlines tab and load data
+        showAirlinesTab() {
+            this.showAirlinesPanel = true;
+            this.airlineSearch = ''; // Reset search
+            // Load airlines if not already loaded
+            if (this.airlines.length === 0) {
+                fetch('/flight/airlines', {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                    .then(response => response.json())
+                    .then(result => {
+                        this.airlines = result.data;
+                    })
+                    .catch(error => {
+                        console.error('Error fetching airlines:', error);
+                    });
+            }
+        },
+
+        openTravelerPanel() {
+            // Close airlines panel if open
+            this.openAirlines = false;
+            // Open travelers panel
+            this.openTraveler = true;
+        },
+        // Open only Airlines panel separately
+        openAirlinesPanel() {
+            // Close travelers panel if open
+            this.openTraveler = false;
+
+            // Open airlines panel
+            this.openAirlines = true;
+
+            // Reset search
+            this.airlineSearch = '';
+
+            // Load airlines if not already loaded
+            if (this.airlines.length === 0) {
+                this.fetchAirlines();
+            }
+
+            // ✅ IMPORTANT: focus input after DOM renders
+            this.$nextTick(() => {
+                const input = this.$refs.airlineSearchInput;
+                if (input) {
+                    input.focus();
+                }
+            });
+        },
+
+        // Show airlines in a separate panel/modal
+        async showAirlinesOnly() {
+            // Fetch airlines if not already loaded
+            if (this.airlines.length === 0) {
+                await this.fetchAirlines();
+            }
+            // You can implement a separate modal or dropdown for airlines only
+            // For now, we'll reuse the existing panel but only show airlines tab
+            this.openTraveler = true;
+            this.showAirlinesPanel = true;
+        },
+        // Or create a completely separate airlines modal
+        showAirlinesModal() {
+            // This gives you complete separation from the travelers panel
+            if (this.airlines.length === 0) {
+                this.fetchAirlines().then(() => {
+                    this.openAirlinesModal = true; // You'd need to add this data property
+                });
+            } else {
+                this.openAirlinesModal = true;
+            }
+        },
+
+        // Modified toggle for backward compatibility
+        // toggleTravelerWithAirlines() {
+        //     // This method can be removed or kept for backward compatibility
+        //     this.openTravelerPanel();
+        // },
     },
 
     mounted() {
@@ -1162,6 +1514,18 @@ export default {
             this.segments = [this.createDefaultSegment()];
             const d = new Date(); d.setDate(d.getDate() + 1);
             this.returnDate = d.toISOString().split('T')[0];
+        }
+
+        if (this.isReissue && this.reissueAirline) {
+            // Airlines load হলে match করে selectedAirline set করবো
+            this.fetchAirlines().then(() => {
+                const found = this.airlines.find(
+                    a => a.designator === this.reissueAirline
+                );
+                if (found) {
+                    this.selectedAirline = found;
+                }
+            });
         }
 
         const rf = localStorage.getItem('recentFromAirports');
@@ -1199,8 +1563,8 @@ export default {
 
             this.isSearching = true;
             await this.doStream(searchUrl);
-        }, { once: true }); 
-        
+        }, { once: true });
+
         this.$nextTick(() => {
             this.sendSummaryUpdate();
         });
@@ -1568,14 +1932,19 @@ export default {
     z-index: 9999;
 }
 .fsf-traveler-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
     font-weight: 700;
     font-size: 13px;
     color: var(--fsf-primary);
-    margin-bottom: 14px;
-    padding-bottom: 10px;
+    margin-bottom: 4px;
+    padding-bottom: 3px;
     border-bottom: 1px solid var(--fsf-border);
     letter-spacing: .02em;
 }
+
 .fsf-pax-row {
     display: flex;
     align-items: center;
@@ -2208,4 +2577,187 @@ export default {
 
 .fsf-airport-list::-webkit-scrollbar { width: 4px; }
 .fsf-airport-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+
+/* Airlines Panel Styles */
+.fsf-panel-tabs {
+    display: flex;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 1rem;
+}
+
+.fsf-panel-tabs button {
+    flex: 1;
+    padding: 0.75rem;
+    background: none;
+    border: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-bottom: 2px solid transparent;
+}
+
+.fsf-panel-tabs button:hover {
+    color: #3b82f6;
+}
+
+.fsf-panel-tabs button.active {
+    color: #3b82f6;
+    border-bottom-color: #3b82f6;
+}
+
+.fsf-airlines-panel {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.fsf-airlines-loading {
+    text-align: center;
+    padding: 2rem;
+    color: #6b7280;
+}
+
+.fsf-airlines-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.fsf-airline-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    border-radius: 0.5rem;
+}
+
+.fsf-airline-item:hover {
+    background-color: #f3f4f6;
+}
+
+.fsf-airline-info {
+    flex: 1;
+}
+
+.fsf-airline-name {
+    font-weight: 500;
+    color: #1f2937;
+    margin-bottom: 0.25rem;
+}
+
+.fsf-airline-code {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-family: monospace;
+}
+
+.fsf-close-panel {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #9ca3af;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.fsf-close-panel:hover {
+    background-color: #f3f4f6;
+    color: #4b5563;
+}
+
+.fsf-airlines-search {
+    padding: 0 0 0.75rem 0;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.fsf-airline-search-input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.fsf-airline-search-input:focus {
+    border-color: #3b82f6;
+    ring: 2px solid rgba(59, 130, 246, 0.1);
+}
+
+/* Airlines Panel Full */
+.fsf-airlines-panel-full {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 8px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    width: 380px;
+    z-index: 1000;
+}
+
+/* Adjust airlines panel content */
+.fsf-airlines-panel-full .fsf-airlines-panel {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* Separate button styling */
+.fsf-airlines-btn {
+    margin-left: 10px;
+    background: #f3f4f6;
+}
+
+.fsf-airlines-btn i {
+    color: #3b82f6;
+}
+
+.fsf-airline-badge {
+    background: #0258FF;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 12px;
+    font-size: 11px;
+    margin-left: 8px;
+}
+.fsf-airline-title {
+    margin: 2px 20px;
+}
+
+.fsf-remove-airline {
+    background: #fee2e2;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    color: #dc2626;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.fsf-remove-airline:hover {
+    background: #fecaca;
+    transform: scale(1.02);
+}
+
+.fsf-selected-airline {
+    margin: 0px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
 </style>

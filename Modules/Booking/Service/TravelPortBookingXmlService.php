@@ -945,19 +945,20 @@ XML;
      */
     private function buildSingleTraveler(array $passenger, int $index, string $carrier = ''): string
     {
-        $dob = $passenger['dob'] ?? $passenger['date_of_birth'] ?? null;
+        $dob           = $passenger['dob'] ?? $passenger['date_of_birth'] ?? null;
         $departureDate = $passenger['departure_date'] ?? null;
 
-        $typeInfo = $this->helper->getPassengerTypeFromDOB($dob, $departureDate);
+        $typeInfo     = $this->helper->getPassengerTypeFromDOB($dob, $departureDate);
         $travelerType = $typeInfo['type'];
-        $age = $typeInfo['age'];
+        $age          = $typeInfo['age'];
 
         $key = $passenger['key'] ?? base64_encode("BookingTraveler" . ($index + 1));
 
         $genderRaw = strtolower($passenger['gender'] ?? 'male');
-        $isFemale = in_array($genderRaw, ['f', 'female']);
-        $gender = $isFemale ? 'F' : 'M';
+        $isFemale  = in_array($genderRaw, ['f', 'female']);
+        $gender    = $isFemale ? 'F' : 'M';
 
+        // ── Prefix: DB title থেকে নাও, না থাকলে gender+type থেকে auto ──
         $dbTitle = strtoupper(trim($passenger['title'] ?? ''));
         $allowed = ['MR', 'MRS', 'MS', 'MISS', 'MSTR', 'DR', 'PROF'];
 
@@ -971,17 +972,24 @@ XML;
             }
         }
 
-        $firstName = strtoupper($passenger['first_name'] ?? '');
-        $lastName  = strtoupper($passenger['last_name'] ?? '');
+        // ✅ Prefix এর শেষে space — GDS এ FirstName এর আগে space থাকবে
+//        $prefix = rtrim($prefix) . ' ';
+        $prefix = ' ' . rtrim($prefix);
 
-        $genderAttr = " Gender=\"{$gender}\"";
+        // ── Name — trim করো, DB তে অতিরিক্ত space থাকলে সরাও ──
+        $firstName = strtoupper(trim($passenger['first_name'] ?? ''));
+        $lastName  = strtoupper(trim($passenger['last_name']  ?? ''));
 
+        // ── DOB attribute ──
         $dobAttr = '';
         if ($dob) {
-            $dobFormatted = date('Y-m-d', strtotime($dob));
-            $dobAttr = " DOB=\"{$dobFormatted}\"";
+            $ts = strtotime($dob);
+            if ($ts !== false && $ts > 0) {
+                $dobAttr = ' DOB="' . date('Y-m-d', $ts) . '"';
+            }
         }
 
+        // ── Age attribute (CNN/INF only) ──
         $ageAttr = '';
         if (in_array($travelerType, ['CNN', 'INF'])) {
             $ageAttr = " Age=\"{$age}\"";
@@ -989,19 +997,16 @@ XML;
 
         $phoneXml   = $this->buildPhoneNumber($passenger, $index);
         $emailXml   = $this->buildEmail($passenger);
-//        $ssrXml     = $this->buildSSR($passenger, $index, $carrier);
-        $ssrXml = $this->buildSSR($passenger, $index, $carrier, $travelerType);
+        $ssrXml     = $this->buildSSR($passenger, $index, $carrier, $travelerType);
         $contactSsr = ($index === 0) ? $this->buildContactSSRs($passenger, $carrier) : '';
         $addressXml = $this->buildAddress($passenger);
-        $nameRemarkXml = $this->buildNameRemark($travelerType, $age);
-
 
         $xml  = "            <com:BookingTraveler Key=\"{$key}\" TravelerType=\"{$travelerType}\" Gender=\"{$gender}\"{$dobAttr}{$ageAttr}>\n";
         $xml .= "                <com:BookingTravelerName Prefix=\"{$prefix}\" First=\"{$firstName}\" Last=\"{$lastName}\"/>\n";
 
-        if ($phoneXml) $xml .= $phoneXml . "\n";
-        if ($emailXml) $xml .= $emailXml . "\n";
-        if ($ssrXml)   $xml .= $ssrXml . "\n";
+        if ($phoneXml)   $xml .= $phoneXml   . "\n";
+        if ($emailXml)   $xml .= $emailXml   . "\n";
+        if ($ssrXml)     $xml .= $ssrXml     . "\n";
         if ($contactSsr) $xml .= $contactSsr . "\n";
 
         if ($travelerType === 'CNN') {
@@ -1012,6 +1017,7 @@ XML;
         if ($addressXml) $xml .= $addressXml . "\n";
 
         $xml .= "            </com:BookingTraveler>\n";
+
         return $xml;
     }
 
@@ -1051,39 +1057,63 @@ EMAIL;
 
     private function buildSSR(array $passenger, int $index, string $carrier = '', string $travelerType = ''): string
     {
-        $passportNumber = $passenger['passport_number'] ?? null;
-        if (!$passportNumber) return '';
+        // ✅ Passport — string cast করো (leading zeros রক্ষার জন্য)
+        $passportNumber = (string)($passenger['passport_number'] ?? '');
+        if (empty($passportNumber)) return '';
 
-        // ✅ Passport number sanitize করো — null check এর পরে
-        $passportNumber = preg_replace('/[^A-Z0-9]/', '', strtoupper($passportNumber));
-        if (!$passportNumber) return '';
+        $passportNumber = preg_replace('/[^A-Z0-9]/', '', strtoupper(trim($passportNumber)));
+        if (empty($passportNumber)) return '';
 
         $dob          = $passenger['dob'] ?? $passenger['date_of_birth'] ?? '';
         $nationality  = strtoupper($passenger['nationality'] ?? 'BD');
         $issueCountry = strtoupper($passenger['passport_issue_country'] ?? $nationality);
         $gender       = strtoupper(substr($passenger['gender'] ?? 'M', 0, 1));
         $expiry       = $passenger['passport_expiry_date'] ?? '';
-        $lastName     = strtoupper($passenger['last_name']  ?? '');
-        $firstName    = strtoupper($passenger['first_name'] ?? '');
+        $lastName     = strtoupper(trim($passenger['last_name']  ?? ''));
+        $firstName    = strtoupper(trim($passenger['first_name'] ?? ''));
 
-        $dobFormatted    = $dob    ? strtoupper(date('dMy', strtotime($dob)))    : '';
-        $expiryFormatted = $expiry ? strtoupper(date('dMy', strtotime($expiry))) : '';
+        // ✅ DOB — validate করো, empty হলে SSR skip
+        $dobFormatted = '';
+        if (!empty($dob)) {
+            $ts = strtotime($dob);
+            if ($ts !== false && $ts > 0) {
+                $dobFormatted = strtoupper(date('dMy', $ts));
+            }
+        }
+        if (empty($dobFormatted)) {
+            Log::warning('DOCS SSR skipped — DOB missing or invalid', [
+                'index'    => $index,
+                'passport' => $passportNumber,
+                'dob_raw'  => $dob,
+            ]);
+            return '';
+        }
 
+        // ✅ Expiry — validate করো
+        $expiryFormatted = '';
+        if (!empty($expiry)) {
+            $ts = strtotime($expiry);
+            if ($ts !== false && $ts > 0) {
+                $expiryFormatted = strtoupper(date('dMy', $ts));
+            }
+        }
+
+        // ✅ INF gender suffix
         if ($travelerType === 'INF') {
             $gender .= 'I';
         }
 
-
-        $freeText = "P/{$issueCountry}/{$passportNumber}/{$nationality}/{$dobFormatted}/{$gender}/{$expiryFormatted}/{$lastName}/{$firstName}";
-        Log::info('DOCS SSR Debug', [
-            'passport'    => $passportNumber,
-            'dob_raw'     => $dob,
-            'dob_format'  => $dobFormatted,
-            'expiry_raw'  => $expiry,
-            'expiry_format' => $expiryFormatted,
-            'freeText'    => $freeText,
-        ]);
+        $freeText    = "P/{$issueCountry}/{$passportNumber}/{$nationality}/{$dobFormatted}/{$gender}/{$expiryFormatted}/{$lastName}/{$firstName}";
         $carrierAttr = $carrier ? " Carrier=\"{$carrier}\"" : '';
+
+        Log::info('DOCS SSR', [
+            'passport'       => $passportNumber,
+            'dob_raw'        => $dob,
+            'dob_format'     => $dobFormatted,
+            'expiry_raw'     => $expiry,
+            'expiry_format'  => $expiryFormatted,
+            'freeText'       => $freeText,
+        ]);
 
         return "                <com:SSR Key=\"{$index}\" Type=\"DOCS\" Status=\"HK\"{$carrierAttr} FreeText=\"{$freeText}\"/>";
     }

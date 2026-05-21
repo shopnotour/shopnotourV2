@@ -4,12 +4,12 @@
         @click="toggleSearchForm"
     >
         <div class="p-4 md:p-5">
-            <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center justify-between gap-2 md:gap-3">
                 <!-- Route -->
                 <div class="flex items-center gap-3">
                     <div class="flex items-center gap-2">
                         <i class="fas fa-plane-departure text-blue-500"></i>
-                        <span class="font-semibold text-gray-800">{{ summaryData.route || 'Select Route' }}</span>
+                        <span class="font-semibold text-gray-800 text-xs md:text-base">{{ summaryData.route || 'Select Route' }}</span>
                     </div>
                 </div>
 
@@ -17,39 +17,40 @@
                 <div class="hidden md:block w-px h-8 bg-gray-200"></div>
 
                 <!-- Trip Type -->
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 hidden md:flex">
                     <i class="fas fa-route text-green-500"></i>
-                    <span class="text-gray-700">{{ summaryData.tripTypeLabel }}</span>
+                    <span class="text-gray-700 text-sm md:text-base">{{ summaryData.tripTypeLabel }}</span>
                 </div>
 
                 <!-- Separator -->
                 <div class="hidden md:block w-px h-8 bg-gray-200"></div>
 
                 <!-- Dates -->
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 hidden md:flex">
                     <i class="fas fa-calendar-alt text-purple-500"></i>
-                    <span class="text-gray-700">{{ summaryData.dates || 'Select dates' }}</span>
+                    <span class="text-gray-700 text-xs md:text-base">{{ summaryData.dates || 'Select dates' }}</span>
                 </div>
 
                 <!-- Separator -->
                 <div class="hidden md:block w-px h-8 bg-gray-200"></div>
 
                 <!-- Travelers & Class -->
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-3 hidden md:flex">
                     <div class="flex items-center gap-2">
                         <i class="fas fa-users text-orange-500"></i>
-                        <span class="text-gray-700">{{ summaryData.travelers || '0 Travelers' }}</span>
+                        <span class="text-gray-700 text-sm md:text-base">{{ summaryData.travelers || '0 Travelers' }}</span>
                     </div>
+                    <div class="hidden md:block w-px h-8 bg-gray-200"></div>
                     <div class="flex items-center gap-2">
                         <i class="fas fa-chair text-indigo-500"></i>
-                        <span class="text-gray-700">{{ summaryData.travelClass || 'Economy' }}</span>
+                        <span class="text-gray-700 text-sm md:text-base">{{ summaryData.travelClass || 'Economy' }}</span>
                     </div>
                 </div>
 
                 <!-- Toggle Button -->
                 <div class="ml-auto">
                     <button
-                        class="group flex items-center justify-center gap-2 px-4 py-2 md:px-6 md:py-3
+                        class="group flex items-center justify-center gap-2 px-1 py-1 md:px-6 md:py-3
                             bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800
                             text-white font-semibold rounded-full shadow-md hover:shadow-lg
                             transition-all duration-300 transform hover:scale-105"
@@ -146,42 +147,48 @@ export default {
 
 <style scoped>
 .flight-summary-card {
-    transition: all 0.3s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
     border: 1px solid #e5e7eb;
+    will-change: transform;
 }
 
 .flight-summary-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+    box-shadow:
+        0 10px 25px -5px rgba(0, 0, 0, 0.1),
+        0 10px 10px -5px rgba(0, 0, 0, 0.02);
 }
 
 .rotate-180 {
     transform: rotate(180deg);
+    transition: transform 0.3s ease;
 }
 
+/* Mobile Improvements */
 @media (max-width: 768px) {
-    .flight-summary-card .flex-wrap {
-        flex-direction: column;
-        align-items: flex-start !important;
+
+    /* Prevent horizontal layout breaking */
+    .flight-summary-card .flex.items-center.gap-4 {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none; /* Firefox */
     }
 
-    .flight-summary-card .ml-auto {
-        margin-left: 0;
-        margin-top: 12px;
-        align-self: stretch;
-        width: 100%;
+    .flight-summary-card .flex.items-center.gap-4::-webkit-scrollbar {
+        display: none; /* Chrome/Safari */
     }
 
-    .flight-summary-card .ml-auto button {
-        width: 100%;
+    /* Improve tap interaction */
+    .flight-summary-card {
+        border-radius: 12px;
     }
 
-    .hidden.md\:block {
-        display: none !important;
-    }
-
-    .flight-summary-card .flex-wrap > div {
-        width: 100%;
+    /* Disable hover animation on touch devices */
+    .flight-summary-card:hover {
+        transform: none;
+        box-shadow: none;
     }
 }
 </style>

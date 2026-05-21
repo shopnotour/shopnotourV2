@@ -202,9 +202,11 @@
         window.isLoggedIn = {{ Auth::check() ? 'true' : 'false' }};
         window.userRoleId = {{ Auth::check() ? Auth::user()->role_id : 'null' }};
         window.flightData = {
-            flights:      @json($flights ?? []),
-            searchParams: @json($searchParams ?? []),
-            searchUrl:    '{{ route("flight.search") }}'
+            flights:        @json($flights ?? []),
+            searchParams:   @json($searchParams ?? []),
+            searchUrl:      '{{ route("flight.search") }}',
+            isReissue:      @json($isReissue ?? false),
+            reissueAirline: @json($reissueAirline ?? null),
         };
     </script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>

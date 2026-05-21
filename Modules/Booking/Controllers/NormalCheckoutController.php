@@ -1705,7 +1705,7 @@ class NormalCheckoutController extends BookingController
 
     private function handleReissue(Request $request, $booking)
     {
-    //    return $request;
+        //    return $request;
         try {
             $request->validate([
                 'passenger_ids'   => 'required|array|min:1',
@@ -1895,7 +1895,7 @@ class NormalCheckoutController extends BookingController
                 'travel_class'  => $originalSearchParams['travel_class'] ?? $booking->seat_class ?? 'ECONOMY',
                 'children_ages' => $childrenAges,
                 'segments'      => $segments,
-                'airline_code'  => $supplierPnr,
+                'airline_codes'  => $supplierPnr,
             ];
 
             // ✅ Round trip এ return_date
@@ -1930,7 +1930,7 @@ class NormalCheckoutController extends BookingController
                     'reissue_id'     => $reissue->id,
                     'old_booking_id' => $booking->id,
                     'old_pnr'        => $request->pnr_number,
-                    'airline_code'   => $supplierPnr,
+                    'airline_codes'   => $supplierPnr,
                     'passenger_ids'  => $passengerIds,
                     'passengers'     => $passengersData,
                     'search_params'  => $searchParamsForSession,

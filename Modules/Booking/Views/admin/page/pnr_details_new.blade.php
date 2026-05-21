@@ -363,7 +363,7 @@
                                     <td class="px-4 py-3">
                                         <span class="w-6 h-6 bg-navy-100 text-navy-700 rounded-full flex items-center justify-center text-xs font-bold">{{ $travelerIdx }}</span>
                                     </td>
-                                    <td class="px-4 py-3 font-semibold text-slate-800">{{ $pax['first_name'] ?? '' }} {{ $pax['last_name'] ?? '' }}</td>
+{{--                                    <td class="px-4 py-3 font-semibold text-slate-800">{{ $pax['prefix'] ?? '' }} {{ $pax['first_name'] ?? '' }} {{ $pax['last_name'] ?? '' }}</td>--}}
                                     <td class="px-4 py-3">
                         <span class="text-xs font-bold px-2 py-1 rounded-lg {{ $typeColorMap[$paxType] ?? 'bg-slate-100 text-slate-600' }}">
                             {{ $pax['passenger_type'] ?? $pax['traveler_type'] ?? 'ADULT' }}

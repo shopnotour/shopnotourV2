@@ -232,10 +232,25 @@
                     </div>
 
                     <!-- Airlines Button -->
-                    <div class="fsf-pill-btn fsf-airlines-btn" @click="openAirlinesPanel">
+<!--                    <div class="fsf-pill-btn fsf-airlines-btn" @click="openAirlinesPanel">-->
+<!--                        <i class="fa fa-plane"></i>-->
+<!--                        <span>Airlines</span>-->
+<!--                        <span v-if="selectedAirlineDesignator" class="fsf-airline-badge">-->
+<!--                            {{ selectedAirlineDesignator }}-->
+<!--                        </span>-->
+<!--                    </div>-->
+
+                    <div
+                        class="fsf-pill-btn fsf-airlines-btn"
+                        @click="!isReissue && openAirlinesPanel()"
+                        :style="isReissue ? 'cursor: not-allowed; opacity: 0.7;' : ''">
                         <i class="fa fa-plane"></i>
                         <span>Airlines</span>
-                        <span v-if="selectedAirlineDesignator" class="fsf-airline-badge">
+                        <span v-if="isReissue && reissueAirline" class="fsf-airline-badge">
+                            {{ reissueAirline }} <i class="fa fa-lock" style="font-size:9px; margin-left:3px;"></i>
+                        </span>
+                                            <span v-else-if="selectedAirlineDesignator" class="fsf-airline-badge">
+
                             {{ selectedAirlineDesignator }}
                         </span>
                     </div>
@@ -246,9 +261,10 @@
                             <div class="fsf-traveler-title">
                                 Passengers & Class
                             </div>
-                            <button 
-                                type="button" 
-                                class="fsf-close-panel" 
+
+                            <button
+                                type="button"
+                                class="fsf-close-panel"
                                 @click="closeTraveler">
                                 &times;
                             </button>
@@ -323,9 +339,10 @@
                             <div class="fsf-airline-title">
                                 Select Airline
                             </div>
-                            <button 
-                                type="button" 
-                                class="fsf-close-panel" 
+
+                            <button
+                                type="button"
+                                class="fsf-close-panel"
                                 @click="closeAirlines">
                                 &times;
                             </button>
@@ -337,8 +354,8 @@
                                 <i class="fa fa-check-circle" style="color: #10b981;"></i>
                                 <span>Selected: <strong>{{ selectedAirline.name }} ({{ selectedAirline.designator }})</strong></span>
                             </div>
-                            <button 
-                                type="button" 
+                            <button
+                                type="button"
                                 class="fsf-remove-airline"
                                 @click.stop.prevent="removeSelectedAirline">
                                 <i class="fa fa-trash-alt"></i>
@@ -350,15 +367,15 @@
 
                         <div class="fsf-airlines-panel">
                             <div class="fsf-airlines-search">
-                                <input 
+                                <input
                                     ref="airlineSearchInput"
-                                    type="text" 
-                                    v-model="airlineSearch" 
-                                    placeholder="Search Airlines..." 
+                                    type="text"
+                                    v-model="airlineSearch"
+                                    placeholder="Search Airlines..."
                                     class="fsf-airline-search-input"
                                     @click.stop>
                             </div>
-                            
+
 
                             <div class="fsf-airlines-list">
 
@@ -369,9 +386,10 @@
 
                                 <!-- Data -->
                                 <template v-else>
-                                    
-                                    <div 
-                                        v-for="airline in filteredAirlines" 
+
+                                    <div
+                                        v-for="airline in filteredAirlines"
+
                                         :key="airline.id"
                                         class="fsf-airline-item"
                                         :class="{ 'selected': selectedAirline && selectedAirline.id === airline.id }"
@@ -379,8 +397,9 @@
 
                                         <div class="fsf-airline-info">
                                             <div class="fsf-airline-name-row">
-                                                <img 
-                                                    v-if="airline.image_url" 
+                                                <img
+                                                    v-if="airline.image_url"
+
                                                     :src="airline.image_url"
                                                     class="inline-block w-6 h-6 mr-2 rounded-full"
                                                     style="width: 24px; height: 24px; object-fit: cover;"
@@ -389,10 +408,9 @@
                                                 <span class="fsf-airline-code">- {{ airline.designator }}</span>
                                             </div>
                                         </div>
-
-                                        <i v-if="selectedAirline && selectedAirline.id === airline.id" 
-                                        class="fa fa-check-circle" 
-                                        style="color: #10b981;"></i>
+                                        <i v-if="selectedAirline && selectedAirline.id === airline.id"
+                                           class="fa fa-check-circle"
+                                           style="color: #10b981;"></i>
                                         <i v-else class="fa fa-chevron-right" style="color: #9ca3af;"></i>
                                     </div>
 
@@ -599,6 +617,11 @@ export default {
     name: 'FlightSearchForm',
     components: { AirportList },
 
+    props: {
+        isReissue:      { type: Boolean, default: false },
+        reissueAirline: { type: String,  default: null  },
+    },
+
     data() {
         return {
             isSelectingAirport: false,
@@ -719,8 +742,9 @@ export default {
         filteredAirlines() {
             if (!this.airlineSearch) return this.airlines;
             const search = this.airlineSearch.toLowerCase();
-            return this.airlines.filter(airline => 
-                airline.name.toLowerCase().includes(search) || 
+            return this.airlines.filter(airline =>
+                airline.name.toLowerCase().includes(search) ||
+
                 airline.designator.toLowerCase().includes(search)
             );
         },
@@ -829,7 +853,7 @@ export default {
                 const fromCode = firstSegment?.from_display?.split(' - ')[0] || '';
                 const toCode = firstSegment?.to_display?.split(' - ')[0] || '';
                 const route = `${fromCode} → ${toCode}`;
-                
+
                 // Format dates
                 let dates = '';
                 if (this.tripType === 'oneway') {
@@ -841,17 +865,17 @@ export default {
                     dates = `${dep} → ${ret}`;
                 } else if (this.tripType === 'multi') {
                     const first = firstSegment?.departure ? this.formatDisplayDate(firstSegment.departure) : '';
-                    const last = this.segments[this.segments.length - 1]?.departure ? 
+                    const last = this.segments[this.segments.length - 1]?.departure ?
                         this.formatDisplayDate(this.segments[this.segments.length - 1].departure) : '';
                     dates = `${first} → ${last}`;
                 }
-                
+
                 // Format travelers
                 const travelers = `${this.totalPassengers} Traveler${this.totalPassengers !== 1 ? 's' : ''}`;
-                
+
                 // Format class
                 const travelClassLabel = this.classes.find(c => c.value === this.travelClass)?.label || 'Economy';
-                
+
                 // Send to parent window
                 window.postMessage({
                     type: 'flight-search-summary-update',
@@ -1156,7 +1180,7 @@ export default {
         addChild()    { this.children++; this.childrenAges.push(''); },
         removeChild() { if (this.children > 0) { this.children--; this.childrenAges.pop(); } },
         toggleTraveler() { this.openTraveler = !this.openTraveler; },
-        closeTraveler() { this.openTraveler = false; },        
+        closeTraveler() { this.openTraveler = false; },
         closeAirlines() { this.openAirlines = false; },
 
         // ── Outside click ──
@@ -1203,8 +1227,16 @@ export default {
             });
             if (this.tripType === 'round' && this.returnDate) p.append('return_date', this.returnDate);
 
-            if (this.selectedAirline && this.selectedAirline.designator) {
-                p.append('airline_codes', this.selectedAirline.designator);
+            // if (this.selectedAirline && this.selectedAirline.designator) {
+            //     p.append('airline_codes', this.selectedAirline.designator);
+            // }
+
+            const airlineCode = this.isReissue
+                ? this.reissueAirline                          // ✅ reissue হলে সবসময় original
+                : this.selectedAirline?.designator ?? null;    // ✅ normal হলে user choice
+
+            if (airlineCode) {
+                p.append('airline_codes', airlineCode);
             }
 
             const searchUrl = `${window.flightData?.searchUrl || '/flight'}?${p.toString()}`;
@@ -1271,6 +1303,18 @@ export default {
 
                         try {
                             const flight = JSON.parse(raw);
+
+                            // ✅ Meta event handle
+                            if (flight.__meta) {
+                                window.dispatchEvent(new CustomEvent('flight-search-meta', {
+                                    detail: {
+                                        isReissue:      flight.isReissue,
+                                        reissueAirline: flight.reissueAirline,
+                                    }
+                                }));
+                                continue;
+                            }
+
                             window.dispatchEvent(new CustomEvent('flight-search-item', { detail: flight }));
                         } catch(e) {}
                     }
@@ -1281,7 +1325,6 @@ export default {
             } catch(e) {
                 console.error('Stream error:', e);
             } finally {
-                // ✅ সবসময় এখানে শেষ হবে
                 this.isSearching = false;
                 window.dispatchEvent(new CustomEvent('flight-search-done'));
             }
@@ -1318,10 +1361,10 @@ export default {
                 // Opening the panel - ALWAYS show Travelers tab first
                 this.openTraveler = true;
                 this.showAirlinesPanel = false; // Force show Travelers tab
-                
+
                 // Reset airline search when opening
                 this.airlineSearch = '';
-                
+
                 // Load airlines in background if not already loaded
                 if (this.airlines.length === 0) {
                     this.fetchAirlines(); // Load in background without showing
@@ -1332,17 +1375,17 @@ export default {
                 this.showAirlinesPanel = false;
             }
         },
-        
+
         // Select an airline to filter
         removeSelectedAirline() {
             this.selectedAirline = null;
             this.advAirline = '';
-            
+
             // Trigger search update without airline filter
             this.$emit('airline-removed');
-            
+
         },
-        
+
         // Select an airline to filter (updated)
         selectAirline(airline) {
             // If clicking the same airline that's already selected, remove it
@@ -1350,28 +1393,28 @@ export default {
                 this.removeSelectedAirline();
                 return;
             }
-            
+
             this.preventAutoSearch = true;
             this.advAirline = airline.name;
             this.selectedAirline = airline;
-            
+
             // Close airlines panel
             this.openAirlines = false;
-            
+
             // trigger search with airline filter
             this.$emit('airline-selected', airline);
-            
+
             setTimeout(() => {
                 this.preventAutoSearch = false;
             }, 500);
         },
-        
+
+
         // Clear airline filter from advanced search
         clearAirlineFilter() {
             this.selectedAirline = null;
             this.advAirline = '';
             this.openAirlines = false;
-            
             // Trigger search update
             if (!this.preventAutoSearch) {
                 this.handleSearch();
@@ -1382,7 +1425,6 @@ export default {
         showAirlinesTab() {
             this.showAirlinesPanel = true;
             this.airlineSearch = ''; // Reset search
-            
             // Load airlines if not already loaded
             if (this.airlines.length === 0) {
                 fetch('/flight/airlines', {
@@ -1391,13 +1433,13 @@ export default {
                         'X-Requested-With': 'XMLHttpRequest'
                     }
                 })
-                .then(response => response.json())
-                .then(result => {
-                    this.airlines = result.data;
-                })
-                .catch(error => {
-                    console.error('Error fetching airlines:', error);
-                });
+                    .then(response => response.json())
+                    .then(result => {
+                        this.airlines = result.data;
+                    })
+                    .catch(error => {
+                        console.error('Error fetching airlines:', error);
+                    });
             }
         },
 
@@ -1407,7 +1449,6 @@ export default {
             // Open travelers panel
             this.openTraveler = true;
         },
-    
         // Open only Airlines panel separately
         openAirlinesPanel() {
             // Close travelers panel if open
@@ -1432,20 +1473,18 @@ export default {
                 }
             });
         },
-    
+
         // Show airlines in a separate panel/modal
         async showAirlinesOnly() {
             // Fetch airlines if not already loaded
             if (this.airlines.length === 0) {
                 await this.fetchAirlines();
             }
-            
             // You can implement a separate modal or dropdown for airlines only
             // For now, we'll reuse the existing panel but only show airlines tab
             this.openTraveler = true;
             this.showAirlinesPanel = true;
         },
-    
         // Or create a completely separate airlines modal
         showAirlinesModal() {
             // This gives you complete separation from the travelers panel
@@ -1457,12 +1496,12 @@ export default {
                 this.openAirlinesModal = true;
             }
         },
-    
+
         // Modified toggle for backward compatibility
-        toggleTravelerWithAirlines() {
-            // This method can be removed or kept for backward compatibility
-            this.openTravelerPanel();
-        },
+        // toggleTravelerWithAirlines() {
+        //     // This method can be removed or kept for backward compatibility
+        //     this.openTravelerPanel();
+        // },
     },
 
     mounted() {
@@ -1475,6 +1514,18 @@ export default {
             this.segments = [this.createDefaultSegment()];
             const d = new Date(); d.setDate(d.getDate() + 1);
             this.returnDate = d.toISOString().split('T')[0];
+        }
+
+        if (this.isReissue && this.reissueAirline) {
+            // Airlines load হলে match করে selectedAirline set করবো
+            this.fetchAirlines().then(() => {
+                const found = this.airlines.find(
+                    a => a.designator === this.reissueAirline
+                );
+                if (found) {
+                    this.selectedAirline = found;
+                }
+            });
         }
 
         const rf = localStorage.getItem('recentFromAirports');
@@ -1512,8 +1563,8 @@ export default {
 
             this.isSearching = true;
             await this.doStream(searchUrl);
-        }, { once: true }); 
-        
+        }, { once: true });
+
         this.$nextTick(() => {
             this.sendSummaryUpdate();
         });

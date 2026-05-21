@@ -22,10 +22,19 @@ if (searchFormEl) {
     const formVm = new Vue({
         el: '#flight-search-form',
         components: { FlightSearchForm },
-        template: `<FlightSearchForm @search-results="onResults"/>`,
+        template: `<FlightSearchForm
+            :is-reissue="isReissue"
+            :reissue-airline="reissueAirline"
+            @search-results="onResults"
+        />`,
+        data() {
+            return {
+                isReissue:      window.flightData?.isReissue      ?? false,
+                reissueAirline: window.flightData?.reissueAirline ?? null,
+            }
+        },
         methods: {
             onResults(data) {
-                // Custom event দিয়ে FlightSearch কে জানান
                 window.dispatchEvent(new CustomEvent('flight-search-results', { detail: data }));
             }
         }
@@ -55,6 +64,15 @@ if (searchAppEl) {
                     window.dispatchEvent(new CustomEvent('trigger-auto-search'));
                 });
             }
+            window.addEventListener('flight-search-meta', (e) => {
+                const { isReissue, reissueAirline } = e.detail;
+                if (isReissue && reissueAirline) {
+                    this.fetchAirlines().then(() => {
+                        const found = this.airlines.find(a => a.designator === reissueAirline);
+                        if (found) this.selectedAirline = found;
+                    });
+                }
+            });
         },
         template: `
             <div>

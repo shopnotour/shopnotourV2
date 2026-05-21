@@ -961,7 +961,7 @@ class BookingManagementController extends Controller
 //                    return $pnrCode;
                     $pnrService = new TravelPortPNRRetrieveService();
                     $result = $pnrService->retrievePNR($pnrCode);
-
+//return $result;
                     if ($booking) {
                         $ticketDate = null;
 

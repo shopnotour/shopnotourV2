@@ -423,7 +423,7 @@
                             </div>
                         </div>
 
-                        <button type="button" class="fsf-done-btn" @click="closeAirlines">Done</button>
+                        <!-- <button type="button" class="fsf-done-btn" @click="closeAirlines">Done</button> -->
                     </div>
                 </div>
 

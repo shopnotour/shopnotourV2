@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Payment\NagadPaymentController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\ContactListController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SslCommerzPaymentController;
@@ -65,6 +66,8 @@ Route::get('/intro', 'LandingpageController@index');
 Route::get('/', 'HomeController@index');
 Route::get('/home', 'HomeController@index')->name('home');
 Route::post('/install/check-db', 'HomeController@checkConnectDatabase');
+
+Route::get('/contact-list', [ContactListController::class, 'index'])->name('contact-list');
 
 // Social Login
 Route::get('social-login/{provider}', 'Auth\LoginController@socialLogin');

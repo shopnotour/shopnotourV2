@@ -151,7 +151,7 @@ class FlightController extends Controller
 
     public function index(Request $request)
     {
-        // return $request;
+//return $request;
         $reissueParams = session('reissue_search_params');
 
         if ($reissueParams) {
@@ -211,6 +211,14 @@ class FlightController extends Controller
         if ($request->expectsJson() || $request->ajax()) {
             return response()->stream(function () use ($validated) {
 
+                echo "data: " . json_encode([
+                        '__meta' => true,
+                        'isReissue'      => isset($validated['reissue_id']) && !empty($validated['reissue_id']),
+                        'reissueAirline' => $validated['airline_codes'] ?? null,
+                    ]) . "\n\n";
+                ob_flush();
+                flush();
+
                 $this->flightSearch->searchStream($validated, function ($flight) {
                     echo "data: " . json_encode($flight) . "\n\n";
                     ob_flush();
@@ -231,8 +239,10 @@ class FlightController extends Controller
 
         // ✅ Normal page load
         return response()->view('Flight::frontend.vueSearch.flight_search', [
-            'flights'      => [],
-            'searchParams' => $validated,
+            'flights'        => [],
+            'searchParams'   => $validated,
+            'isReissue'      => isset($validated['reissue_id']) && !empty($validated['reissue_id']),
+            'reissueAirline' => $validated['airline_codes'] ?? null,
         ])->withHeaders([
             'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
             'Pragma'        => 'no-cache',

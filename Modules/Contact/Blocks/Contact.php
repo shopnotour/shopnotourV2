@@ -31,4 +31,9 @@ class Contact extends BaseBlock
     {
         return view('Contact::frontend.blocks.contact.index', $model);
     }
+
+    public function contactlist($model = [])
+    {
+        return view('Contact::frontend.blocks.contact.contact-list', $model);
+    }
 }

@@ -1,4 +1,5 @@
 <?php
+
 namespace Modules\Contact\Controllers;
 
 use App\Helpers\ReCaptchaEngine;
@@ -22,15 +23,16 @@ class ContactController extends Controller
     {
         $data = [
             'page_title' => __("Contact Page"),
-            'header_transparent'=>true,
-            'breadcrumbs'       => [
+            'header_transparent' => true,
+            'breadcrumbs' => [
                 [
                     'name'  => __('Contact'),
-                    'url'  => route('contact.index'),
+                    'url'   => route('contact.index'),
                     'class' => 'active'
                 ],
             ],
         ];
+
         return view('Contact::index', $data);
     }
 
@@ -43,45 +45,66 @@ class ContactController extends Controller
                 'email'
             ],
             'name'    => ['required'],
-            'phone'    => ['required'],
+            'phone'   => ['required'],
             'message' => ['required']
         ]);
+
         /**
-         * Google ReCapcha
+         * Google ReCaptcha
          */
-        if(ReCaptchaEngine::isEnable()){
+        if (ReCaptchaEngine::isEnable()) {
             $codeCapcha = $request->input('g-recaptcha-response');
-            if(!$codeCapcha or !ReCaptchaEngine::verify($codeCapcha)){
+
+            if (!$codeCapcha || !ReCaptchaEngine::verify($codeCapcha)) {
                 $data = [
-                    'status'    => 0,
-                    'message'    => __('Please verify the captcha'),
+                    'status'  => 0,
+                    'message' => __('Please verify the captcha'),
                 ];
+
                 return response()->json($data, 200);
             }
         }
+
         $row = new Contact($request->input());
         $row->status = 'sent';
+
         if ($row->save()) {
+
             $this->sendEmail($row);
+
             $data = [
-                'status'    => 1,
-                'message'    => __('Thank you for contacting us! We will get back to you soon'),
+                'status'  => 1,
+                'message' => __('Thank you for contacting us! We will get back to you soon'),
             ];
+
             return response()->json($data, 200);
         }
     }
 
-    protected function sendEmail($contact){
-        if($admin_email = setting_item('admin_email')){
+    protected function sendEmail($contact)
+    {
+        if ($admin_email = setting_item('admin_email')) {
+
             try {
                 Mail::to($admin_email)->send(new NotificationToAdmin($contact));
-            }catch (Exception $exception){
-                Log::warning("Contact Send Mail: ".$exception->getMessage());
+
+            } catch (Exception $exception) {
+                Log::warning("Contact Send Mail: " . $exception->getMessage());
             }
         }
     }
 
-    public function t(){
+    public function contactlist(Request $request)
+    {
+        $data = [
+            'page_title' => __('Contact List'),
+        ];
+
+        return view('Contact::contact-list', $data);
+    }
+
+    public function t()
+    {
         return new NotificationToAdmin(Contact::find(1));
     }
 }

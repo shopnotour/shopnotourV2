@@ -291,7 +291,7 @@
             display: none; align-items: center; justify-content: center; padding: 16px;
         }
         .modal-overlay.open { display: flex; }
-        .modal-box { background: #fff; border-radius: 18px; width: 100%; max-width: 680px; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; }
+        .modal-box { background: #fff; border-radius: 18px; width: 100%; max-width: 730px; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; }
         .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
         .modal-body { flex: 1; overflow-y: auto; padding: 20px; background: #f8fafc; }
         .modal-foot { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
@@ -1351,7 +1351,7 @@
                                 ['label'=>'Airline',      'val'=> $airCode ?? ($segments[0]['airline_name'] ?? null)],
                                 ['label'=>'Checked Bag',  'val'=> $checkedBag ? $checkedBag.'kg' : null],
                                 ['label'=>'Cabin Bag',    'val'=> $cabinBag ? $cabinBag.'kg' : null],
-                                ['label'=>'Source',       'val'=> strtoupper($booking->source ?? '')],
+                                // ['label'=>'Source',       'val'=> strtoupper($booking->source ?? '')],
                                 ['label'=>'Segments',     'val'=> count($segments).' segment'.(count($segments)>1?'s':'')],
                                 ['label'=>'Refundable',   'val'=> !empty($booking->is_refundable) ? 'Yes' : 'No'],
                                 ['label'=>'TAU Deadline', 'val'=> $tauDate ? \Carbon\Carbon::parse($tauDate)->format('d M, H:i') : null],
@@ -1411,329 +1411,399 @@
                 </div>
             </div>
             <div class="modal-body">
-                <div id="printContent" style="font-family: Arial, sans-serif; font-size: 12px; color: #000; background: #fff; padding: 28px; border-radius: 10px; width: 100%;">
+                <div id="printContent" style="padding:20px;background:#fff;font-family:Arial,sans-serif;font-size:12px;color:#111;">
 
-                    {{-- ── Agency Header ── --}}
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 24px;">
-                        <div>
-                            <div style="font-size:16px; font-weight:800; margin-bottom:6px;">SHOPNO TOUR</div>
-                            <div style="font-size:11px; color:#333; line-height:1.7;">
-                                Address: Green square House # 1/B, Floor 3/A, Road # 08, Gulshan-1 CNS Tower, 2nd Floor, Dhaka-1212.<br>
-                                Contact number: 0248815080/0248815081<br>
-                                IATA CODE: 42342576<br>
-                                Civil Aviation Number: 0014018<br>
-                                E-mail : shopnotourbd@gmail.com
-                            </div>
-                        </div>
-                        <div>
-                            @php
-                                $logoUrl = get_file_url(setting_item('logo_id'), 'full');
-                            @endphp
-                            @if($logoUrl)
-                                <img src="{{ $logoUrl }}" alt="Shopno Tour" style="height:80px; width:auto; object-fit:contain;">
+                    @php
+                        $invLogoId  = setting_item('logo_invoice_id');
+                        $invLogoUrl = $invLogoId
+                            ? \Modules\Media\Helpers\FileHelper::url($invLogoId, 'full')
+                            : get_file_url(setting_item('logo_id'), 'full');
+                        $invLogoSrc = '';
+                        if ($invLogoUrl) {
+                            $invLogoPath = public_path(parse_url($invLogoUrl, PHP_URL_PATH));
+                            if (file_exists($invLogoPath)) {
+                                $invMime    = mime_content_type($invLogoPath);
+                                $invLogoSrc = 'data:' . $invMime . ';base64,' . base64_encode(file_get_contents($invLogoPath));
+                            } else {
+                                $invLogoSrc = $invLogoUrl;
+                            }
+                        }
+                        $invCompanyInfo = setting_item('invoice_company_info') ?? '';
+                    @endphp
+
+                    {{-- Agency Header --}}
+                    <table style="width:100%;border-collapse:collapse;margin-bottom:18px;">
+                        <tr>
+                            <td style="vertical-align:top;padding:0;">
+                                <style>
+                                    .invoice-info p { margin:0 !important; padding:0 !important; }
+                                    .invoice-info h1, .invoice-info h2, .invoice-info h3,
+                                    .invoice-info h4, .invoice-info h5, .invoice-info h6 {
+                                        margin:0 !important;
+                                        padding:0 !important;
+                                        font-weight:700 !important;
+                                        line-height:1.4 !important;
+                                    }
+                                    .invoice-info h1 { font-size:24px !important; }
+                                    .invoice-info h2 { font-size:20px !important; }
+                                    .invoice-info h3 { font-size:18px !important; }
+                                    .invoice-info h4 { font-size:16px !important; }
+                                    .invoice-info h5 { font-size:14px !important; }
+                                    .invoice-info h6 { font-size:12px !important; }
+                                    .invoice-info strong, .invoice-info b { font-weight:700 !important; }
+                                    .invoice-info span[style] { font-size:inherit; }
+                                </style>
+                                <div class="invoice-info" style="font-family:Arial,sans-serif;">
+                                    {!! $invCompanyInfo !!}
+                                </div>
+                            </td>
+                            @if($invLogoSrc)
+                                <td style="vertical-align:middle;text-align:right;padding:0;width:140px;padding-left:20px;">
+                                    <img src="{{ $invLogoSrc }}" alt="Logo"
+                                         style="max-height:80px;max-width:130px;width:auto;object-fit:contain;display:inline-block;">
+                                </td>
                             @endif
-                        </div>
+                        </tr>
+                    </table>
+
+                    <div style="font-size:16px;font-weight:700;margin-bottom:14px;">
+                        {{ $booking->status === 'booked' ? 'Booking Confirmation' : 'E-Ticket / Itinerary' }}
                     </div>
 
-                    {{-- ── Itinerary Title ── --}}
-                    <div style="font-size:16px; font-weight:700; margin-bottom:14px;">Itinerary</div>
-
-                    {{-- ── Passenger Information ── --}}
-                    <div style="font-size:14px; font-weight:700; margin-bottom:6px;">Passenger Information</div>
-                    <table style="width:100%; border-collapse:collapse; margin-bottom:14px;">
+                    {{-- Passenger Information --}}
+                    <div style="font-size:14px;font-weight:700;margin-bottom:6px;">Passenger Information</div>
+                    <table style="width:100%;border-collapse:collapse;margin-bottom:14px;">
                         <thead>
                         <tr style="background:#b8d4e8;">
-                            <th style="border:1px solid #999; padding:6px 8px; text-align:left; font-size:11px;">Passenger Information</th>
-                            <th style="border:1px solid #999; padding:6px 8px; text-align:left; font-size:11px;">Date of Birth</th>
-                            <th style="border:1px solid #999; padding:6px 8px; text-align:left; font-size:11px;">Passport Number</th>
-                            <th style="border:1px solid #999; padding:6px 8px; text-align:left; font-size:11px;">Passport Expiry</th>
-                            <th style="border:1px solid #999; padding:6px 8px; text-align:left; font-size:11px;">Frequent Flyer Number</th>
-                            <th style="border:1px solid #999; padding:6px 8px; text-align:left; font-size:11px;">Ticket</th>
+                            <th style="border:1px solid #999;padding:6px 8px;text-align:left;font-size:11px;">Passenger Name</th>
+                            <th style="border:1px solid #999;padding:6px 8px;text-align:left;font-size:11px;">Date of Birth</th>
+                            <th style="border:1px solid #999;padding:6px 8px;text-align:left;font-size:11px;">Passport Number</th>
+                            <th style="border:1px solid #999;padding:6px 8px;text-align:left;font-size:11px;">Passport Expiry</th>
+                            <th style="border:1px solid #999;padding:6px 8px;text-align:left;font-size:11px;">Frequent Flyer</th>
+                            <th style="border:1px solid #999;padding:6px 8px;text-align:left;font-size:11px;">Ticket</th>
                         </tr>
                         </thead>
                         <tbody>
                         @foreach($passengers as $pax)
                             @php
-                                $fn     = strtoupper(trim($pax['first_name'] ?? ''));
-                                $ln     = strtoupper(trim($pax['last_name']  ?? ''));
-                                $prefix = strtoupper(trim($pax['prefix']     ?? ''));
-                                $pName  = trim($ln.($ln && $fn ? '/' : '').$fn.($prefix ? ' '.$prefix : ''));
-                                if(!$pName) $pName = 'PASSENGER';
-                                $ffn    = $pax['frequent_flyer_number'] ?? ($pax['ffn'] ?? '');
-                                $ticket = $pax['ticket_number'] ?? '';
-                                $dob    = !empty($pax['dob']) ? date('d M Y', strtotime($pax['dob'])) : '';
-                                $expiry = !empty($pax['passport_expiry']) ? date('d M Y', strtotime($pax['passport_expiry'])) : '';
+                                $fn3    = strtoupper(trim($pax['first_name'] ?? ''));
+                                $ln3    = strtoupper(trim($pax['last_name']  ?? ''));
+                                $ttl3   = strtoupper(trim($pax['prefix']     ?? ''));
+                                $pName3 = trim($ln3.($ln3 && $fn3 ? '/' : '').$fn3.($ttl3 ? ' '.$ttl3 : ''));
+                                if (!$pName3) $pName3 = 'PASSENGER';
+                                $dob3 = !empty($pax['dob']) ? \Carbon\Carbon::parse($pax['dob'])->format('d M Y') : '';
+                                $exp3 = !empty($pax['passport_expiry']) ? \Carbon\Carbon::parse($pax['passport_expiry'])->format('d M Y') : '';
+                                $ffn3 = $pax['frequent_flyer_number'] ?? ($pax['ffn'] ?? '');
+                                $tkt3 = $pax['ticket_number'] ?? '';
                             @endphp
                             <tr>
-                                <td style="border:1px solid #ccc; padding:5px 8px; font-size:11px;">{{ $pName }}</td>
-                                <td style="border:1px solid #ccc; padding:5px 8px; font-size:11px;">{{ $dob }}</td>
-                                <td style="border:1px solid #ccc; padding:5px 8px; font-size:11px;">{{ $pax['passport_number'] ?? '' }}</td>
-                                <td style="border:1px solid #ccc; padding:5px 8px; font-size:11px;">{{ $expiry }}</td>
-                                <td style="border:1px solid #ccc; padding:5px 8px; font-size:11px;">{{ $ffn }}</td>
-                                <td style="border:1px solid #ccc; padding:5px 8px; font-size:11px;">{{ $ticket }}</td>
+                                <td style="border:1px solid #ccc;padding:5px 8px;font-size:11px;font-weight:700;">{{ $pName3 }}</td>
+                                <td style="border:1px solid #ccc;padding:5px 8px;font-size:11px;">{{ $dob3 }}</td>
+                                <td style="border:1px solid #ccc;padding:5px 8px;font-size:11px;font-family:monospace;font-weight:700;">{{ $pax['passport_number'] ?? '' }}</td>
+                                <td style="border:1px solid #ccc;padding:5px 8px;font-size:11px;">{{ $exp3 }}</td>
+                                <td style="border:1px solid #ccc;padding:5px 8px;font-size:11px;">{{ $ffn3 }}</td>
+                                <td style="border:1px solid #ccc;padding:5px 8px;font-size:11px;font-family:monospace;font-weight:700;color:#003580;">{{ $tkt3 ?: '—' }}</td>
                             </tr>
                         @endforeach
                         </tbody>
                     </table>
 
-                    {{-- ── PNR Row ── --}}
-                    <table style="width:100%; border-collapse:collapse; margin-bottom:20px;">
+                    {{-- PNR Table --}}
+                    <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
                         <thead>
                         <tr style="background:#b8d4e8;">
-                            <th style="border:1px solid #999; padding:6px 8px; text-align:left; font-size:11px;">Airline PNR</th>
-                            <th style="border:1px solid #999; padding:6px 8px; text-align:left; font-size:11px;">PNR</th>
-                            <th style="border:1px solid #999; padding:6px 8px; text-align:left; font-size:11px;">Date of Issue</th>
+                            <th style="border:1px solid #999;padding:6px 8px;text-align:left;font-size:11px;">Airline PNR</th>
+                            <th style="border:1px solid #999;padding:6px 8px;text-align:left;font-size:11px;">GDS PNR</th>
+                            <th style="border:1px solid #999;padding:6px 8px;text-align:left;font-size:11px;">Date of Issue</th>
                         </tr>
                         </thead>
                         <tbody>
                         <tr>
-                            <td style="border:1px solid #ccc; padding:5px 8px; font-size:11px;">
-                                {{ $pnrAirline ? $pnrAirline.' ('.$airCode.' - '.($segments[0]['airline_name'] ?? $airCode).')' : ($pnrGDS ?? '—') }}
+                            <td style="border:1px solid #ccc;padding:5px 8px;font-size:11px;">
+                                {{ !empty($pnrAirline) ? $pnrAirline.' ('.($airCode??'').' - '.($segments[0]['airline_name']??'').')' : '—' }}
                             </td>
-                            <td style="border:1px solid #ccc; padding:5px 8px; font-size:11px;">{{ $pnrGDS ?? '—' }}</td>
-                            <td style="border:1px solid #ccc; padding:5px 8px; font-size:11px;">{{ date('dMy') }}</td>
+                            <td style="border:1px solid #ccc;padding:5px 8px;font-size:11px;font-family:monospace;font-weight:700;">
+                                {{ $pnrGDS ?? $booking->pnr_id ?? '—' }}
+                            </td>
+                            <td style="border:1px solid #ccc;padding:5px 8px;font-size:11px;">{{ date('dMy') }}</td>
                         </tr>
                         </tbody>
                     </table>
 
-                    {{-- ── Itinerary Information — LEG SYSTEM ── --}}
-                    <div style="font-size:14px; font-weight:700; margin-bottom:6px;">Itinerary Information</div>
-                    <table style="width:100%; border-collapse:collapse; margin-bottom:20px;">
+                    {{-- Itinerary Information --}}
+                    <div style="font-size:14px;font-weight:700;margin-bottom:6px;">Itinerary Information</div>
+
+                    <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
                         <thead>
                         <tr style="background:#b8d4e8;">
-                            <th style="border:1px solid #999; padding:6px 8px; text-align:left; font-size:11px;">Flight #</th>
-                            <th style="border:1px solid #999; padding:6px 8px; text-align:left; font-size:11px;">From</th>
-                            <th style="border:1px solid #999; padding:6px 8px; text-align:left; font-size:11px;">To</th>
-                            <th style="border:1px solid #999; padding:6px 8px; text-align:left; font-size:11px;">Depart</th>
-                            <th style="border:1px solid #999; padding:6px 8px; text-align:left; font-size:11px;">Arrive</th>
-                            <th style="border:1px solid #999; padding:6px 8px; text-align:left; font-size:11px;">Seat</th>
-                            <th style="border:1px solid #999; padding:6px 8px; text-align:left; font-size:11px;">Info</th>
+                            <th style="border:1px solid #999;padding:6px 8px;text-align:left;font-size:11px;">Flight</th>
+                            <th style="border:1px solid #999;padding:6px 8px;text-align:center;font-size:11px;">From</th>
+                            <th style="border:1px solid #999;padding:6px 8px;text-align:center;font-size:11px;">Depart</th>
+                            <th style="border:1px solid #999;padding:6px 8px;text-align:center;font-size:11px;">To</th>
+                            <th style="border:1px solid #999;padding:6px 8px;text-align:center;font-size:11px;">Arrive</th>
+                            <th style="border:1px solid #999;padding:6px 8px;text-align:center;font-size:11px;">Details</th>
                         </tr>
                         </thead>
                         <tbody>
-{{--                        <div style="font-size:14px; font-weight:700; margin-bottom:10px;">Itinerary Information</div>--}}
 
                         @foreach($legGroups as $li => $legGroup)
                             @php
-                                $legSegs = $legGroup['segments'];
-                                $legJrn  = $legGroup['journey'];
-                                $isOut   = $legGroup['type'] === 'outbound';
-                                $fcBagKg = null;
+                                $lgSegs = $legGroup['segments'];
+                                $lgJrn  = $legGroup['journey'];
+                                $lgOut  = $legGroup['type'] === 'outbound';
+                                $lgFcBag = null;
                                 foreach($fareBreakdowns as $fb) {
                                     $fc = ($fb['fare_construction'] ?? [])[$li] ?? ($fb['fare_construction'][0] ?? null);
-                                    if(!empty($fc['checked_bag_kg'])) { $fcBagKg = $fc['checked_bag_kg']; break; }
+                                    if(!empty($fc['checked_bag_kg'])) { $lgFcBag = $fc['checked_bag_kg']; break; }
                                 }
-                                $legBag = $fcBagKg ? $fcBagKg.'K' : ($checkedBag ? $checkedBag.'K' : '');
+                                $lgBagDisplay = $lgFcBag ? $lgFcBag.'kg' : ($checkedBag ? $checkedBag.'kg' : '');
                             @endphp
 
-                            {{-- Leg Title --}}
-                            <div style="background:#1d4ed8; color:#fff; padding:6px 12px; border-radius:6px 6px 0 0; font-size:11px; font-weight:700; margin-bottom:0;">
-                                {{ $isOut ? '✈ OUTBOUND' : '✈ RETURN' }}
-                                &nbsp;·&nbsp; {{ $legJrn['first_airport_code'] }} → {{ $legJrn['last_airport_code'] }}
-                                &nbsp;·&nbsp; {{ date('D, d M Y', strtotime($legJrn['departure_date'])) }}
-{{--                                @if($legBag) &nbsp;·&nbsp; Baggage: {{ $legBag }} @endif--}}
-                            </div>
+                            <tr>
+                                <td colspan="6" style="background:#f1f5f9;border:1px solid #cbd5e1;padding:5px 10px;font-size:10px;font-weight:700;color:#475569;">
+                                    {{ $lgOut ? '✈ Outbound' : '✈ Return' }}
+                                    &nbsp;·&nbsp; {{ $lgJrn['first_airport_code'] }} → {{ $lgJrn['last_airport_code'] }}
+                                    &nbsp;·&nbsp; {{ date('D, d M Y', strtotime($lgJrn['departure_date'])) }}
+                                    @if($lgBagDisplay) &nbsp;·&nbsp; 🧳 {{ $lgBagDisplay }} @endif
+                                </td>
+                            </tr>
 
-                            <table style="width:100%; border-collapse:collapse; margin-bottom:14px;">
-                                <thead>
-                                <tr style="background:#b8d4e8;">
-                                    <th style="border:1px solid #999; padding:6px 8px; text-align:left; font-size:11px; width:130px;">Flight</th>
-                                    <th style="border:1px solid #999; padding:6px 8px; text-align:left; font-size:11px;">Route</th>
-                                    <th style="border:1px solid #999; padding:6px 8px; text-align:left; font-size:11px; width:90px;">Depart</th>
-                                    <th style="border:1px solid #999; padding:6px 8px; text-align:left; font-size:11px; width:90px;">Arrive</th>
-                                    <th style="border:1px solid #999; padding:6px 8px; text-align:left; font-size:11px; width:170px;">Details</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                @foreach($legSegs as $si => $seg)
-                                    @php
-                                        $airlineName = $seg['airline_name'] ?? $seg['carrier'];
-                                        $flightNo    = $seg['carrier'].($seg['flight_number'] ?? '');
-                                       $depTs = strtotime($seg['departure_time']);
-                                        $arrTs = strtotime($seg['arrival_time']);
-                                        $dur   = $toHM($seg['travel_time'] ?? 0);
-                                        // Raw time from ISO string — no timezone conversion
-                                        preg_match('/T(\d{2}:\d{2})/', $seg['departure_time'], $dm);
-                                        preg_match('/T(\d{2}:\d{2})/', $seg['arrival_time'], $am);
-                                        $depRaw = $dm[1] ?? date('H:i', $depTs);
-                                        $arrRaw = $am[1] ?? date('H:i', $arrTs);
-                                        $dep12  = date('h:i A', strtotime($depRaw));
-                                        $arr12  = date('h:i A', strtotime($arrRaw));
-                                        $cbU   = strtoupper(trim($seg['cabin_class'] ?? ''));
-                                        if(in_array($cbU,['Y','ECONOMY']))                                $cl = 'Y-Economy';
-                                        elseif(in_array($cbU,['E','ECONOMY CLASSIC','PREMIUM ECONOMY'])) $cl = 'E-Economy';
-                                        elseif(in_array($cbU,['BUSINESS','C','J']))                       $cl = 'Business';
-                                        elseif(in_array($cbU,['FIRST','F']))                              $cl = 'First';
-                                        else                                                              $cl = $seg['cabin_class'] ?? '';
-                                        $ac = $seg['aircraft_name'] ?? '';
-                                        if(empty($ac)||(strlen($ac)<=4&&ctype_alnum($ac))) $ac = $seg['equipment'] ?? '';
-                                        if(strlen($ac)<=4&&ctype_alnum($ac)) $ac='';
-                                        $status = $seg['status_name'] ?? $seg['status'] ?? 'Confirmed';
+                            @foreach($lgSegs as $si => $seg)
+                                @php
+                                    $lgAirline = $seg['airline_name'] ?? $seg['carrier'];
+                                    $lgFlight  = $seg['carrier'].($seg['flight_number'] ?? '');
+                                    preg_match('/T(\d{2}:\d{2})/', $seg['departure_time'], $lgDm);
+                                    preg_match('/T(\d{2}:\d{2})/', $seg['arrival_time'],   $lgAm);
+                                    preg_match('/^(\d{4}-\d{2}-\d{2})/', $seg['departure_time'], $lgDd);
+                                    preg_match('/^(\d{4}-\d{2}-\d{2})/', $seg['arrival_time'],   $lgAd);
+                                    $lgDepRaw  = $lgDm[1] ?? '00:00';
+                                    $lgArrRaw  = $lgAm[1] ?? '00:00';
+                                    $lgDepDate = !empty($lgDd[1]) ? date('d M y', strtotime($lgDd[1])) : '';
+                                    $lgArrDate = !empty($lgAd[1]) ? date('d M y', strtotime($lgAd[1])) : '';
+                                    $lgDur     = floor(($seg['travel_time']??0)/60).'h '.(($seg['travel_time']??0)%60).'m';
+                                    $lgAc = $seg['aircraft_name'] ?? '';
+                                    if(empty($lgAc)||(strlen($lgAc)<=4&&ctype_alnum($lgAc))) $lgAc = $seg['equipment'] ?? '';
+                                    if(strlen($lgAc)<=4&&ctype_alnum($lgAc)) $lgAc = '';
+                                    $lgStatus  = $seg['status_name'] ?? $seg['status'] ?? 'Confirmed';
+                                    $lgClass   = $seg['cabin_class'] ?? '';
+                                    $lgCos     = $seg['class_of_service'] ?? '';
+                                    $lgOrigCity = $seg['origin_city'] ?? $seg['origin'];
+                                    $lgOrigTerm = isset($seg['departure_terminal']) && $seg['departure_terminal'] ? ' T'.$seg['departure_terminal'] : '';
+                                    $lgDestCity = $seg['destination_city'] ?? $seg['destination'];
+                                    $lgDestTerm = isset($seg['arrival_terminal']) && $seg['arrival_terminal'] ? ' T'.$seg['arrival_terminal'] : '';
 
-                                        // Origin/Dest
-                                        $orig = $seg['origin_city'] ?? $seg['origin'];
-                                        $origApt = $seg['origin_airport_name'] ?? '';
-                                        $fromTxt = $orig.($origApt ? ' - '.$origApt : '').(isset($seg['departure_terminal'])&&$seg['departure_terminal'] ? ' T'.$seg['departure_terminal'] : '');
-
-                                        $dest = $seg['destination_city'] ?? $seg['destination'];
-                                        $destApt = $seg['destination_airport_name'] ?? '';
-                                        $toTxt = $dest.($destApt ? ' - '.$destApt : '').(isset($seg['arrival_terminal'])&&$seg['arrival_terminal'] ? ' T'.$seg['arrival_terminal'] : '');
-
-                                        // Layover
-                                        $isLastSeg = $si === count($legSegs)-1;
-                                        $lvText = '';
-                                        if(!$isLastSeg) {
-                                            $ns = $legSegs[$si+1];
-                                            $lvMin = (int)((strtotime($ns['departure_time']) - strtotime($seg['arrival_time'])) / 60);
-                                            $overnight = date('Y-m-d',strtotime($seg['arrival_time'])) !== date('Y-m-d',strtotime($ns['departure_time'])) ? ' · Overnight' : '';
-                                            $lvText = floor($lvMin/60).'h '.($lvMin%60).'m layover at '.$seg['destination'].$overnight;
+                                    $lgSegBag = '';
+                                    if(!empty($seg['checked_bag_allowance'])) {
+                                        $lgSegBag = $seg['checked_bag_allowance'];
+                                    } elseif(!empty($fareBreakdowns)) {
+                                        foreach($fareBreakdowns as $fb) {
+                                            $fcArr = $fb['fare_construction'] ?? [];
+                                            $fc = $fcArr[$li] ?? ($fcArr[0] ?? null);
+                                            if(!empty($fc['checked_bag_kg'])) { $lgSegBag = $fc['checked_bag_kg'].'kg'; break; }
                                         }
-                                    @endphp
+                                    }
+                                    if(empty($lgSegBag) && !empty($lgBagDisplay)) $lgSegBag = $lgBagDisplay;
+                                    if(empty($lgSegBag) && $checkedBag) $lgSegBag = $checkedBag.'kg';
 
-                                    <tr style="vertical-align:top; background:#fff;">
-                                        {{-- Flight # --}}
-                                        <td style="border:1px solid #ccc; padding:7px 8px; font-size:11px;">
-                                            @php
-                                                $airlineInfo = \Modules\Flight\Models\Airline::getByCode($seg['carrier'] ?? '');
-                                                $airlineImg  = $airlineInfo['image_thumb'] ?? $airlineInfo['image_url'] ?? '';
-                                            @endphp
-                                            @if($airlineImg)
-                                                <img src="{{ $airlineImg }}" style="height:24px;width:auto;object-fit:contain;margin-bottom:4px;display:block;">
-                                            @else
-                                                <div style="display:inline-block; background:#c0392b; color:#fff; border-radius:50%; width:16px; height:16px; text-align:center; line-height:16px; font-size:9px; margin-bottom:3px;">✈</div>
+                                    $lgAirlineInfo   = \Modules\Flight\Models\Airline::getByCode($seg['carrier'] ?? '');
+                                    $lgAirlineRawImg = $lgAirlineInfo['image_thumb'] ?? $lgAirlineInfo['image_url'] ?? '';
+                                    $lgAirlineImg    = '';
+                                    if ($lgAirlineRawImg) {
+                                        $lgImgPath = public_path(parse_url($lgAirlineRawImg, PHP_URL_PATH));
+                                        if (file_exists($lgImgPath)) {
+                                            $lgMime       = mime_content_type($lgImgPath);
+                                            $lgAirlineImg = 'data:'.$lgMime.';base64,'.base64_encode(file_get_contents($lgImgPath));
+                                        } else {
+                                            $lgAirlineImg = $lgAirlineRawImg;
+                                        }
+                                    }
+                                    $lgIsLast = $si === count($lgSegs)-1;
+                                    $lgLvText = '';
+                                    if(!$lgIsLast) {
+                                        $lgNs    = $lgSegs[$si+1];
+                                        $lgLvMin = (int)((strtotime($lgNs['departure_time']) - strtotime($seg['arrival_time'])) / 60);
+                                        $lgOvn   = date('Y-m-d',strtotime($seg['arrival_time'])) !== date('Y-m-d',strtotime($lgNs['departure_time'])) ? ' · Overnight' : '';
+                                        $lgLvText = floor($lgLvMin/60).'h '.($lgLvMin%60).'m layover at '.$seg['destination'].$lgOvn;
+                                    }
+                                @endphp
+
+                                <tr style="background:#fff;vertical-align:middle;">
+                                    <td style="border:1px solid #ccc;padding:7px 10px;white-space:nowrap;">
+                                        @if($lgAirlineImg)
+                                            <img src="{{ $lgAirlineImg }}" style="height:18px;width:auto;object-fit:contain;display:block;margin-bottom:3px;">
+                                        @endif
+                                        <div style="font-size:11px;font-weight:700;color:#1e293b;">{{ $lgAirline }}</div>
+                                        <div style="font-size:10px;font-family:monospace;color:#1d4ed8;font-weight:700;">{{ $lgFlight }}</div>
+                                        <div style="font-size:9px;color:#94a3b8;margin-top:2px;">✈ {{ $lgDur }}</div>
+                                    </td>
+                                    <td style="border:1px solid #ccc;padding:7px 10px;text-align:center;">
+                                        <div style="font-size:18px;font-weight:800;color:#1e293b;line-height:1;">{{ $seg['origin'] }}</div>
+                                        <div style="font-size:9px;color:#64748b;margin-top:2px;">{{ $lgOrigCity }}{{ $lgOrigTerm }}</div>
+                                    </td>
+                                    <td style="border:1px solid #ccc;padding:7px 10px;text-align:center;white-space:nowrap;">
+                                        <div style="font-size:16px;font-weight:800;color:#0f172a;line-height:1;">{{ $lgDepRaw }}</div>
+                                        <div style="font-size:9px;color:#64748b;margin-top:2px;">{{ $lgDepDate }}</div>
+                                    </td>
+                                    <td style="border:1px solid #ccc;padding:7px 10px;text-align:center;">
+                                        <div style="font-size:18px;font-weight:800;color:#1e293b;line-height:1;">{{ $seg['destination'] }}</div>
+                                        <div style="font-size:9px;color:#64748b;margin-top:2px;">{{ $lgDestCity }}{{ $lgDestTerm }}</div>
+                                    </td>
+                                    <td style="border:1px solid #ccc;padding:7px 10px;text-align:center;white-space:nowrap;">
+                                        <div style="font-size:16px;font-weight:800;color:#0f172a;line-height:1;">{{ $lgArrRaw }}</div>
+                                        <div style="font-size:9px;color:#64748b;margin-top:2px;">{{ $lgArrDate }}</div>
+                                    </td>
+                                    <td style="border:1px solid #ccc;padding:7px 10px;text-align:center;">
+                                        <div style="display:inline-flex;flex-direction:column;gap:3px;align-items:center;">
+                                            <span style="background:#f1f5f9;color:#334155;font-size:9px;font-weight:600;padding:2px 7px;border-radius:3px;white-space:nowrap;">
+                                                {{ $lgClass }}@if($lgCos) ({{ $lgCos }})@endif
+                                            </span>
+                                            <span style="background:#f1f5f9;color:#059669;font-size:9px;font-weight:600;padding:2px 7px;border-radius:3px;">
+                                                ✓ {{ $lgStatus }}
+                                            </span>
+                                            @if($lgSegBag)
+                                                <span style="background:#f1f5f9;color:#334155;font-size:9px;padding:2px 7px;border-radius:3px;white-space:nowrap;">
+                                                    🧳 {{ $lgSegBag }}
+                                                </span>
                                             @endif
-                                            <div style="font-weight:700;">{{ $airlineName }}</div>
-                                            <div style="font-family:monospace; color:#1d4ed8; font-weight:700;">{{ $flightNo }}</div>
-                                        </td>
+                                            @if($lgAc)
+                                                <span style="background:#f1f5f9;color:#64748b;font-size:9px;padding:2px 7px;border-radius:3px;white-space:nowrap;">
+                                                    {{ $lgAc }}
+                                                </span>
+                                            @endif
+                                        </div>
+                                    </td>
+                                </tr>
 
-                                        {{-- Route --}}
-                                        <td style="border:1px solid #ccc; padding:7px 8px; font-size:11px;">
-                                            <div style="display:flex; align-items:center; gap:6px;">
-                                                <div style="text-align:center;">
-                                                    <div style="font-size:15px; font-weight:800; color:#0f172a;">{{ $seg['origin'] }}</div>
-                                                    <div style="font-size:9px; color:#64748b;">{{ $fromTxt }}</div>
-                                                </div>
-                                                <div style="flex:1; text-align:center; color:#94a3b8; font-size:11px; white-space:nowrap;">
-                                                    ——✈——<br>
-                                                    <span style="font-size:10px; color:#64748b;">{{ $dur }}</span>
-                                                </div>
-                                                <div style="text-align:center;">
-                                                    <div style="font-size:15px; font-weight:800; color:#0f172a;">{{ $seg['destination'] }}</div>
-                                                    <div style="font-size:9px; color:#64748b;">{{ $toTxt }}</div>
-                                                </div>
-                                            </div>
-                                        </td>
-
-                                        {{-- NEW --}}
-                                        {{-- Depart --}}
-                                        <td style="border:1px solid #ccc; padding:7px 8px; font-size:11px; white-space:nowrap;">
-                                            <div style="font-size:15px; font-weight:800;">{{ $depRaw }}</div>
-                                            <div style="font-size:11px; color:#475569;">{{ $dep12 }}</div>
-                                            <div style="color:#64748b;">{{ date('D, d M Y', strtotime(substr($seg['departure_time'],0,10))) }}</div>
-                                        </td>
-
-                                        {{-- Arrive --}}
-                                        <td style="border:1px solid #ccc; padding:7px 8px; font-size:11px; white-space:nowrap;">
-                                            <div style="font-size:15px; font-weight:800;">{{ $arrRaw }}</div>
-                                            <div style="font-size:11px; color:#475569;">{{ $arr12 }}</div>
-                                            <div style="color:#64748b;">{{ date('D, d M Y', strtotime(substr($seg['arrival_time'],0,10))) }}</div>
-                                        </td>
-
-                                        {{-- Details --}}
-                                        <td style="border:1px solid #ccc; padding:7px 8px; font-size:11px; line-height:1.8; color:#374151;">
-                                            @php
-                                                $segBag = '';
-                                                // 1. Segment এর নিজের baggage
-                                                if(!empty($seg['checked_bag_allowance'])) {
-                                                    $segBag = $seg['checked_bag_allowance'];
-                                                }
-                                                // 2. fare_construction থেকে এই leg ($li) এর baggage
-                                                if(empty($segBag)) {
-                                                    foreach($fareBreakdowns as $fb) {
-                                                        $fcArr = $fb['fare_construction'] ?? [];
-                                                        $fc = $fcArr[$li] ?? ($fcArr[0] ?? null);
-                                                        if(!empty($fc['checked_bag_kg'])) {
-                                                            $segBag = $fc['checked_bag_kg'].'K';
-                                                            break;
-                                                        }
-                                                    }
-                                                }
-                                                // 3. legBag fallback
-                                                if(empty($segBag) && !empty($legBag)) {
-                                                    $segBag = $legBag;
-                                                }
-                                                // 4. Global pricing fallback
-                                                if(empty($segBag) && $checkedBag) {
-                                                    $segBag = $checkedBag.'K';
-                                                }
-                                            @endphp
-                                            Class : {{ $seg['cabin_class'] ?? '' }}
-                                            @if(!empty($seg['class_of_service']))
-                                                ({{ $seg['class_of_service'] }})
-                                            @endif <br>
-                                            Duration : {{ $dur }}<br>
-                                            Status : <span style="color:#059669; font-weight:600;">Booking Confirm</span><br>
-                                            @if($ac)Aircraft : {{ $ac }}<br>@endif
-                                            Special Svc :<br>
-                                            @if($segBag)Baggage : {{ $segBag }}@endif
+                                @if($lgLvText)
+                                    <tr>
+                                        <td colspan="6" style="border:1px solid #fde68a;padding:5px 12px;background:#fffbeb;font-size:10px;font-weight:600;color:#d97706;text-align:center;">
+                                            ⏱ {{ $lgLvText }}
                                         </td>
                                     </tr>
-
-                                    {{-- Layover row --}}
-                                    @if($lvText)
-                                        <tr>
-                                            <td colspan="5" style="border:1px solid #ccc; padding:5px 12px; background:#fff8e1; font-size:11px; font-weight:600; color:#d97706; text-align:center;">
-                                                ⏱ {{ $lvText }}
-                                            </td>
-                                        </tr>
-                                    @endif
-
-                                @endforeach
-                                </tbody>
-                            </table>
+                                @endif
+                            @endforeach
                         @endforeach
+
                         </tbody>
                     </table>
 
-                    {{-- ── Fare Data ── --}}
-                    <div style="font-size:14px; font-weight:700; margin-bottom:6px;">Fare Data</div>
-                    <table style="width:100%; border-collapse:collapse; margin-bottom:16px;">
+                    {{-- Payment Summary --}}
+                    @php
+                        $gTotal   = $pricing['grand_total'] ?? [];
+                        $bcBaseCurr = $gTotal['base_currency'] ?? ($fareBreakdowns[0]['currency'] ?? 'BDT');
+                        $bcBaseAmt  = $gTotal['base_amount']   ?? ($fareBreakdowns[0]['subtotal'] ?? 0);
+                        $bcEqCurr   = $gTotal['currency']      ?? 'BDT';
+                        $bcTaxStr   = '';
+                        foreach(($fareBreakdowns[0]['tax_breakdown'] ?? []) as $tx) {
+                            $bcTaxStr .= number_format((float)$tx['amount']).$tx['code'].' ';
+                        }
+                        $bcTaxStr = trim($bcTaxStr);
+                        $pmRows = array_filter([
+                            ['Base Fare',     $baseFee,    ''],
+                            $taxFee > 0     ? ['Taxes & Fees',   $taxFee,    '']      : null,
+                            $serviceFee > 0 ? ['Service Charge', $serviceFee,'']      : null,
+                            $aitFee > 0     ? ['AIT Charge',     $aitFee,    '']      : null,
+                            $penaltyAmt > 0 ? ['Penalty', $penaltyAmt, 'red'] : null,
+                            $totalDisc > 0  ? ['Discount',       -$totalDisc,'green'] : null,
+                        ]);
+                        $displayTotal = $bookTotal;
+                        $payable = max(0, (float)($booking->pay_now ?? 0));
+                    @endphp
+
+                    <div style="font-size:14px;font-weight:700;margin-bottom:8px;">Payment Summary</div>
+                    <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
                         <tbody>
-                        @php
-                            $gTotal   = $pricing['grand_total'] ?? [];
-                            $baseCurr = $gTotal['base_currency'] ?? ($fareBreakdowns[0]['currency'] ?? 'BDT');
-                            $baseAmt  = $gTotal['base_amount']   ?? ($fareBreakdowns[0]['subtotal'] ?? 0);
-                            $eqCurr   = $gTotal['currency']      ?? 'BDT';
-                            $taxStr   = '';
-                            foreach(($fareBreakdowns[0]['tax_breakdown'] ?? []) as $tx) {
-                                $taxStr .= number_format((float)$tx['amount']).$tx['code'].' ';
-                            }
-                            $taxStr   = trim($taxStr);
-                        @endphp
-                        <tr>
-                            <td style="border:1px solid #ccc; padding:5px 8px; font-size:11px; width:160px; background:#f5f5f5; font-weight:600;">Fare</td>
-                            <td style="border:1px solid #ccc; padding:5px 8px; font-size:11px;">{{ $baseAmt ? number_format((float)$baseAmt, 2).' '.$baseCurr : '—' }}</td>
+                        @foreach($pmRows as $pmRow)
+                            <tr>
+                                <td style="border:1px solid #e2e8f0;padding:6px 10px;font-size:11px;background:#f8fafc;font-weight:600;width:180px;">
+                                    {{ $pmRow[0] }}
+                                </td>
+                                <td style="border:1px solid #e2e8f0;padding:6px 10px;font-size:11px;
+                                color:{{ $pmRow[2]==='red'?'#dc2626':($pmRow[2]==='green'?'#059669':'#374151') }};
+                                font-weight:{{ $pmRow[2]!==''?'700':'400' }};">
+                                    {{ $pmRow[1] < 0 ? '−' : '' }}৳{{ number_format(ceil(abs($pmRow[1]))) }}
+                                </td>
+                            </tr>
+                        @endforeach
+                        @if($bcTaxStr)
+                            <tr>
+                                <td style="border:1px solid #e2e8f0;padding:6px 10px;font-size:11px;background:#f8fafc;font-weight:600;">Tax Breakdown</td>
+                                <td style="border:1px solid #e2e8f0;padding:6px 10px;font-size:10px;color:#64748b;">{{ $bcTaxStr }}</td>
+                            </tr>
+                        @endif
+                        @if(!empty($booking->tour_code))
+                            <tr>
+                                <td style="border:1px solid #e2e8f0;padding:6px 10px;font-size:11px;background:#f8fafc;font-weight:600;">Tour Code</td>
+                                <td style="border:1px solid #e2e8f0;padding:6px 10px;font-size:11px;">{{ $booking->tour_code }}</td>
+                            </tr>
+                        @endif
+                        <tr style="background:#f0f9ff;">
+                            <td style="border:1px solid #bae6fd;padding:8px 10px;font-size:12px;font-weight:700;color:#0369a1;">
+                                Total Payable
+                            </td>
+                            <td style="border:1px solid #bae6fd;padding:8px 10px;font-size:15px;font-weight:800;color:#0369a1;">
+                                ৳{{ number_format(ceil($displayTotal)) }}
+                            </td>
                         </tr>
-                        <tr>
-                            <td style="border:1px solid #ccc; padding:5px 8px; font-size:11px; background:#f5f5f5; font-weight:600;">Equivalent Fare</td>
-                            <td style="border:1px solid #ccc; padding:5px 8px; font-size:11px;">{{ number_format((float)($gTotal['subtotal'] ?? $baseFee), 2) }} {{ $eqCurr }}</td>
-                        </tr>
-                        <tr>
-                            <td style="border:1px solid #ccc; padding:5px 8px; font-size:11px; background:#f5f5f5; font-weight:600;">Tax</td>
-                            <td style="border:1px solid #ccc; padding:5px 8px; font-size:11px;">{{ $taxStr ?: '—' }}</td>
-                        </tr>
-                        <tr>
-                            <td style="border:1px solid #ccc; padding:5px 8px; font-size:11px; background:#f5f5f5; font-weight:600;">Total</td>
-                            <td style="border:1px solid #ccc; padding:5px 8px; font-size:11px; font-weight:700;">{{ number_format($bookTotal, 2) }} {{ $eqCurr }}</td>
-                        </tr>
-                        <tr>
-                            <td style="border:1px solid #ccc; padding:5px 8px; font-size:11px; background:#f5f5f5; font-weight:600;">Tour Code</td>
-                            <td style="border:1px solid #ccc; padding:5px 8px; font-size:11px;">{{ $booking->tour_code ?? '' }}</td>
-                        </tr>
+                        @if($walletUsed > 0)
+                            <tr>
+                                <td colspan="2" style="border:none;padding:4px 10px;font-size:11px;color:#7c3aed;">
+                                    <i class="fas fa-wallet" style="font-size:10px"></i> Wallet Used: −৳{{ number_format($walletUsed,2) }}
+                                </td>
+                            </tr>
+                        @endif
+                        @if($payable > 0)
+                            <tr>
+                                <td colspan="2" style="border:1px solid #a7f3d0;padding:8px 14px;font-size:12px;font-weight:700;color:#065f46;background:#ecfdf5;">
+                                    Payable Amount: ৳{{ number_format(ceil($payable)) }}
+                                </td>
+                            </tr>
+                        @else
+                            <tr>
+                                <td colspan="2" style="border:1px solid #bae6fd;padding:8px 14px;font-size:12px;font-weight:700;color:#0369a1;background:#f0f9ff;">
+                                    ✓ Amount Paid: ৳{{ number_format(ceil($displayTotal)) }}
+                                </td>
+                            </tr>
+                        @endif
+                        @if(!empty($booking->gateway))
+                            <tr>
+                                <td style="border:1px solid #e2e8f0;padding:6px 10px;font-size:11px;background:#f8fafc;font-weight:600;">Payment Via</td>
+                                <td style="border:1px solid #e2e8f0;padding:6px 10px;font-size:11px;color:#475569;">{{ ucfirst(str_replace('_',' ',$booking->gateway)) }}</td>
+                            </tr>
+                        @endif
                         </tbody>
                     </table>
 
-                    <div style="border-top:1px solid #e2e8f0; padding-top:10px; font-size:10px; color:#94a3b8; text-align:center;">
+                    {{-- Important Reminders --}}
+                    <div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:8px;padding:14px 16px;margin-bottom:16px;">
+                        <div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:8px;">
+                            ⚠️ Important Reminders
+                        </div>
+                        <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px;">
+                            <li style="display:flex;align-items:flex-start;gap:7px;font-size:11px;color:#92400e;">
+                                <span style="color:#fbbf24;flex-shrink:0;margin-top:1px;">•</span>
+                                Arrive at least <strong style="margin:0 2px;">3 hours before</strong> departure for international flights.
+                            </li>
+                            <li style="display:flex;align-items:flex-start;gap:7px;font-size:11px;color:#92400e;">
+                                <span style="color:#fbbf24;flex-shrink:0;margin-top:1px;">•</span>
+                                Carry a valid <strong style="margin:0 2px;">passport &amp; photo ID</strong> for all passengers.
+                            </li>
+                            <li style="display:flex;align-items:flex-start;gap:7px;font-size:11px;color:#92400e;">
+                                <span style="color:#fbbf24;flex-shrink:0;margin-top:1px;">•</span>
+                                Check-in online <strong style="margin:0 2px;">24–48 hours</strong> before departure.
+                            </li>
+                            <li style="display:flex;align-items:flex-start;gap:7px;font-size:11px;color:#92400e;">
+                                <span style="color:#fbbf24;flex-shrink:0;margin-top:1px;">•</span>
+                                Baggage allowance varies by airline. Excess baggage charges may apply at the airport.
+                            </li>
+                            <li style="display:flex;align-items:flex-start;gap:7px;font-size:11px;color:#92400e;">
+                                <span style="color:#fbbf24;flex-shrink:0;margin-top:1px;">•</span>
+                                Please verify your <strong style="margin:0 2px;">name, travel dates, and itinerary</strong> carefully.
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div style="border-top:1px solid #e2e8f0;padding-top:10px;font-size:10px;color:#94a3b8;text-align:center;">
                         Computer-generated booking confirmation. No signature required.
                     </div>
                 </div>

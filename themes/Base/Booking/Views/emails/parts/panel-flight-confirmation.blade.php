@@ -38,6 +38,24 @@
         }
     }
 
+    // Invoice company info (dynamic)
+    $invCompanyInfo = setting_item('invoice_company_info') ?? '';
+    $invLogoId      = setting_item('logo_invoice_id');
+    $invLogoUrl     = $invLogoId
+        ? \Modules\Media\Helpers\FileHelper::url($invLogoId, 'full')
+        : ($logoUrl ?? '');
+    $invLogoSrc = '';
+    if ($invLogoUrl) {
+        $invLogoPath = public_path(parse_url($invLogoUrl, PHP_URL_PATH));
+        if (file_exists($invLogoPath)) {
+            $invMime = mime_content_type($invLogoPath);
+            $invLogoSrc = 'data:' . $invMime . ';base64,' .
+            base64_encode(file_get_contents($invLogoPath));
+        } else {
+            $invLogoSrc  = $invLogoUrl;
+        }
+    }
+
     // Helper: URL → base64 data URI
     $toBase64 = function(string $url): string {
         if (empty($url)) return '';
@@ -65,24 +83,39 @@
     unset($lg);
 @endphp
 
-{{-- ── Agency Header ── --}}
+{{-- ── Agency Header (dynamic from settings) ── --}}
 <table style="width:100%; border-collapse:collapse; margin-bottom:24px; border-bottom:2px solid #e2e8f0; padding-bottom:16px;">
     <tr>
         <td style="vertical-align:top;">
-            <div style="font-size:16px; font-weight:800; margin-bottom:6px;">SHOPNO TOUR</div>
-            <div style="font-size:11px; color:#333; line-height:1.8;">
-                Address: Green square House # 1/B, Floor 3/A, Road # 08, Gulshan-1 CNS Tower, 2nd Floor, Dhaka-1212.<br>
-                Contact number: 0248815080/0248815081<br>
-                IATA CODE: 42342576<br>
-                Civil Aviation Number: 0014018<br>
-                E-mail: shopnotourbd@gmail.com
+            <style>
+                .invoice-info p { margin:0 !important; padding:0 !important; }
+                .invoice-info h1, .invoice-info h2, .invoice-info h3,
+                .invoice-info h4, .invoice-info h5, .invoice-info h6 {
+                    margin:0 !important; padding:0 !important;
+                    font-weight:700 !important; line-height:1.4 !important;
+                }
+                .invoice-info h1 { font-size:24px !important; }
+                .invoice-info h2 { font-size:20px !important; }
+                .invoice-info h3 { font-size:18px !important; }
+                .invoice-info h4 { font-size:16px !important; }
+                .invoice-info h5 { font-size:14px !important; }
+                .invoice-info h6 { font-size:12px !important; }
+                .invoice-info strong, .invoice-info b { font-weight:700 !important; }
+                .invoice-info span[style] { font-size:inherit; }
+            </style>
+            <div class="invoice-info">
+                {!! $invCompanyInfo !!}
             </div>
         </td>
-        <td style="vertical-align:top; text-align:right; width:120px;">
-            @if($logoSrc)
-                <img src="{{ $logoSrc }}" alt="Shopno Tour" style="height:70px; width:auto; object-fit:contain;">
-            @endif
-        </td>
+        @if($invLogoSrc)
+            <td style="vertical-align:middle;text-align:right;width:140px;padding-left:20px;">
+
+                <img src="{{ $invLogoSrc }}"
+                    alt="Logo"
+                    style="max-height:80px;max-width:130px;width:auto;object-fit:contain;display:inline-block;">
+
+            </td>
+        @endif
     </tr>
 </table>
 

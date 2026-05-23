@@ -99,7 +99,7 @@
                 @foreach( $related as $item)
                     <div class="col-lg-3 col-sm-6">
                         @php $item_translation = $item->translate();@endphp
-                        <a href="" class="blogCard -type-2 d-block bg-white rounded-4 shadow-4">
+                        <a href="{{ $item->getDetailUrl() }}" class="blogCard -type-2 d-block bg-white rounded-4 shadow-4">
                             <div class="blogCard__image">
                                 <div class="ratio ratio-1:1 rounded-4">
                                     {!! get_image_tag($item->image_id,'medium',['class'=>'img-ratio rounded-4','alt'=>$item_translation->title,'lazy'=>false]) !!}

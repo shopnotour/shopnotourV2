@@ -285,7 +285,7 @@ class TravelPortBookingXmlService
                 $idx = $typeCounter[$code] ?? 0;
                 $typeCounter[$code] = $idx + 1;
 
-                $key     = $typeToKey[$code][$idx] ?? end($typeToKey[$code]);
+                $key     = $typeToKey[$code][$idx] ?? (is_array($typeToKey[$code] ?? null) ? end($typeToKey[$code]) : '');
                 $ageInfo = $typeToAge[$code][$idx] ?? null;
 
                 // Age replace

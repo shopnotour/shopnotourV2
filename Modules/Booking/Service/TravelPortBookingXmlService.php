@@ -80,6 +80,8 @@ class TravelPortBookingXmlService
         $result = $responsexml->pnrCreate($xml, $bookingId);
 //return $result;
         if (!$result['success']) {
+
+            $booking->update(['pnr_id' => null, 'status' => 'failed']);
             return [
                 'success' => false,
                 'error'   => $result['error'] ?? 'PNR তৈরি হয়নি। অনুগ্রহ করে আবার চেষ্টা করুন।',

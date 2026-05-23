@@ -176,6 +176,7 @@ class FlightController extends Controller
                 'children_ages'   => 'nullable|array',
                 'children_ages.*' => 'integer|min:0|max:12',
                 'travel_class'    => 'required|in:ECONOMY,BUSINESS,FIRST',
+                'special_fare'  => 'nullable|in:student,group,senior,seaman',
                 'airline_codes'   => 'nullable',
             ]);
 

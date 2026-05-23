@@ -42,7 +42,8 @@ class TravelPortXmlBuildService
         }
 
         $searchLegs   = $this->buildSearchLegs($segments);
-        $passengerXml = $this->buildPassengers($passengers);
+        $specialFare  = $searchData['special_fare'] ?? null;
+        $passengerXml = $this->buildPassengers($passengers, $specialFare);
         $modifiers    = $this->buildAirSearchModifiers($airlineCodes, $travelClass);
 
 
@@ -74,6 +75,11 @@ XML;
     {
         $searchLegs = '';
 
+        // ✅ একবারই read করো
+        $alternateDatesEnabled = env('FLIGHT_ALTERNATE_DATES_ENABLED', false);
+        $range  = max(1, min(3, (int) env('FLIGHT_ALTERNATE_DATES_RANGE', 3)));
+        $window = "P{$range}D";
+
         foreach ($segments as $segment) {
             $origin        = $segment['origin']['code'];
             $destination   = $segment['destination']['code'];
@@ -87,25 +93,72 @@ XML;
             $searchLegs .= "            <air:SearchDestination>\n";
             $searchLegs .= "                <com:CityOrAirport xmlns:com=\"{$comVersion}\" Code=\"{$destination}\" PreferCity=\"true\"/>\n";
             $searchLegs .= "            </air:SearchDestination>\n";
-            $searchLegs .= "            <air:SearchDepTime PreferredTime=\"{$departureDate}\"/>\n";
+
+            if ($alternateDatesEnabled) {
+                $searchLegs .= "            <air:SearchDepTime PreferredTime=\"{$departureDate}\" WindowBefore=\"{$window}\" WindowAfter=\"{$window}\"/>\n";
+            } else {
+                $searchLegs .= "            <air:SearchDepTime PreferredTime=\"{$departureDate}\"/>\n";
+            }
+
             $searchLegs .= "        </air:SearchAirLeg>\n";
         }
 
         return $searchLegs;
     }
 
-    private function buildPassengers(array $passengers): string
+    // private function buildPassengers(array $passengers): string
+    // {
+    //     $passengerXml = '';
+    //     $index = 1;
+
+    //     foreach ($passengers['breakdown'] as $passenger) {
+    //         $code = match($passenger['type']) {
+    //             'adult'  => 'ADT',
+    //             'child'  => 'CNN',
+    //             'infant' => 'INF',
+    //             default  => 'ADT',
+    //         };
+
+    //         $ageAttr = '';
+    //         if ($passenger['type'] === 'child' && isset($passenger['age'])) {
+    //             $ageAttr = " Age=\"{$passenger['age']}\"";
+    //         } elseif ($passenger['type'] === 'infant') {
+    //             $ageAttr = ' Age="1"';
+    //         }
+
+    //         $bookingTravelerRef = base64_encode("BookingTraveler{$index}");
+
+    //         // ✅ এই line add করো — AirPrice এও same ref দরকার
+    //         $this->bookingTravelerRefs[$code . '_' . $index] = $bookingTravelerRef;
+
+    //         $passengerXml .= "        <com:SearchPassenger xmlns:com=\"{$this->comVersion}\" Code=\"{$code}\"{$ageAttr} BookingTravelerRef=\"{$bookingTravelerRef}\"/>\n";
+
+    //         $index++;
+    //     }
+
+    //     // ✅ Session এ save করো (optional, কিন্তু debug এ কাজে আসে)
+    //     session(['travelport_traveler_refs' => $this->bookingTravelerRefs]);
+
+    //     return $passengerXml;
+    // }
+
+    private function buildPassengers(array $passengers, ?string $specialFare = null): string
     {
         $passengerXml = '';
         $index = 1;
 
         foreach ($passengers['breakdown'] as $passenger) {
-            $code = match($passenger['type']) {
-                'adult'  => 'ADT',
-                'child'  => 'CNN',
-                'infant' => 'INF',
-                default  => 'ADT',
-            };
+
+            // ✅ Adult এর জন্য special fare check
+            if ($passenger['type'] === 'adult') {
+                $code = $this->resolvePassengerCode($specialFare);
+            } else {
+                $code = match($passenger['type']) {
+                    'child'  => 'CNN',
+                    'infant' => 'INF',
+                    default  => 'ADT',
+                };
+            }
 
             $ageAttr = '';
             if ($passenger['type'] === 'child' && isset($passenger['age'])) {
@@ -115,8 +168,6 @@ XML;
             }
 
             $bookingTravelerRef = base64_encode("BookingTraveler{$index}");
-
-            // ✅ এই line add করো — AirPrice এও same ref দরকার
             $this->bookingTravelerRefs[$code . '_' . $index] = $bookingTravelerRef;
 
             $passengerXml .= "        <com:SearchPassenger xmlns:com=\"{$this->comVersion}\" Code=\"{$code}\"{$ageAttr} BookingTravelerRef=\"{$bookingTravelerRef}\"/>\n";
@@ -124,10 +175,32 @@ XML;
             $index++;
         }
 
-        // ✅ Session এ save করো (optional, কিন্তু debug এ কাজে আসে)
         session(['travelport_traveler_refs' => $this->bookingTravelerRefs]);
 
         return $passengerXml;
+    }
+
+    /**
+     * ✅ Special fare — Sabre এর মতোই same logic
+     */
+    private function resolvePassengerCode(?string $specialFare): string
+    {
+        if (empty($specialFare)) return 'ADT';
+
+        $fareMap = [
+            'student' => ['enabled' => env('FLIGHT_STUDENT_FARE_ENABLED', false), 'code' => 'STU'],
+            'group'   => ['enabled' => env('FLIGHT_GROUP_FARE_ENABLED',   false), 'code' => 'GRP'],
+            'senior'  => ['enabled' => env('FLIGHT_SENIOR_FARE_ENABLED',  false), 'code' => 'SNN'],
+            'seaman'  => ['enabled' => env('FLIGHT_SEAMAN_FARE_ENABLED',  false), 'code' => 'SEA'],
+        ];
+
+        $key = strtolower($specialFare);
+
+        if (!isset($fareMap[$key]) || !$fareMap[$key]['enabled']) {
+            return 'ADT';
+        }
+
+        return $fareMap[$key]['code'];
     }
 
 //    private function buildPassengers(array $passengers): string
@@ -155,6 +228,40 @@ XML;
 //        return $passengerXml;
 //    }
 
+//     private function buildAirSearchModifiers(?array $airlineCodes, string $travelClass): string
+//     {
+//         $modifiers = <<<MOD
+//         <air:AirSearchModifiers MaxSolutions="{$this->maxSolutions}">
+//             <air:PreferredProviders>
+//                 <com:Provider xmlns:com="{$this->comVersion}" Code="1G"/>
+//             </air:PreferredProviders>
+// MOD;
+
+//         // Permitted Carriers (optional)
+//         if (!empty($airlineCodes)) {
+//             if (is_string($airlineCodes)) {
+//                 $airlineCodes = array_filter(array_map('trim', explode(',', $airlineCodes)));
+//             }
+
+//             if (count($airlineCodes) > 0) {
+//                 $modifiers .= "\n            <air:PermittedCarriers>";
+//                 foreach ($airlineCodes as $code) {
+//                     $code       = strtoupper(trim($code));
+//                     $modifiers .= "\n                <com:Carrier xmlns:com=\"{$this->comVersion}\" Code=\"{$code}\"/>";
+//                 }
+//                 $modifiers .= "\n            </air:PermittedCarriers>";
+//             }
+//         }
+
+//         // Preferred Cabin Class
+//         $modifiers .= "\n            <air:PreferredCabins>";
+//         $modifiers .= "\n                <com:CabinClass xmlns:com=\"{$this->comVersion}\" Type=\"{$travelClass}\"/>";
+//         $modifiers .= "\n            </air:PreferredCabins>";
+//         $modifiers .= "\n        </air:AirSearchModifiers>";
+
+//         return $modifiers;
+//     }
+
     private function buildAirSearchModifiers(?array $airlineCodes, string $travelClass): string
     {
         $modifiers = <<<MOD
@@ -180,15 +287,15 @@ MOD;
             }
         }
 
-        // Preferred Cabin Class
+        // ✅ Cabin Class — default Economy, client দিলে সেটা
+        $mappedCabin = $this->mapCabinClass($travelClass);
         $modifiers .= "\n            <air:PreferredCabins>";
-        $modifiers .= "\n                <com:CabinClass xmlns:com=\"{$this->comVersion}\" Type=\"{$travelClass}\"/>";
+        $modifiers .= "\n                <com:CabinClass xmlns:com=\"{$this->comVersion}\" Type=\"{$mappedCabin}\"/>";
         $modifiers .= "\n            </air:PreferredCabins>";
         $modifiers .= "\n        </air:AirSearchModifiers>";
 
         return $modifiers;
     }
-
     private function mapCabinClass(string $travelClass): string
     {
         $mapping = [

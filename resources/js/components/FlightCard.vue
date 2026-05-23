@@ -211,8 +211,11 @@
                                 </div>
                             </div>
                         </div>
-                        <div @click="discountVisible = !discountVisible"
-                             style="margin-right: 12px; cursor: pointer;">
+                        <div
+                            v-if="canShowDiscount"
+                            @click="discountVisible = !discountVisible"
+                            style="margin-right: 12px; cursor: pointer;"
+                        >
                             <i :class="discountVisible ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'"></i>
                         </div>
                         <button @click="closeModal" class="fc-mh-close"><i class="fa fa-times"></i></button>
@@ -776,7 +779,7 @@ export default {
 
 <style scoped>
 .fc-wrap {
-    --fc-blue: #1d4ed8; --fc-blue2: #1e3a8a; --fc-green: #16a34a; --fc-red: #DBEAFE;
+    --fc-blue: #1d4ed8; --fc-blue2: #1e3a8a; --fc-green: #16a34a; --fc-red: #023e8a;
     --fc-orange: #d97706; --fc-border: #e5e7eb; --fc-bg: #f9fafb; --fc-text: #111827;
     --fc-muted: #6b7280; --fc-radius: 12px; --fl-accent:   #03c5ff; --fc-purple2: #DBEAFE;
     background: #fff; border-radius: var(--fc-radius); border: 1px solid var(--fc-border);
@@ -796,7 +799,7 @@ export default {
 .fc-main { display:flex; gap:0; padding:16px 16px 12px; }
 .fc-left { flex:1; min-width:0; }
 .fc-airline { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
-.fc-logo { width:44px; height:32px; object-fit:contain; border-radius:6px; border:1px solid var(--fc-border); padding:2px; background:#fff; }
+.fc-logo { width:84px; height:52px; object-fit:contain; border-radius:6px; border:1px solid var(--fc-border); padding:2px; background:#fff; }
 .fc-logo-fb { width:44px; height:32px; background:#e5e7eb; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:#374151; }
 .fc-airline-name { display:block; font-size:13px; font-weight:700; color:var(--fc-text); }
 .fc-airline-meta { display:flex; flex-wrap:wrap; align-items:center; gap:4px; margin-top:4px; }
@@ -805,7 +808,7 @@ export default {
 .fc-endpoint-right { text-align:center; }
 .fc-time    { font-size:22px; font-weight:800; line-height:1; color:var(--fc-text); }
 .fc-time-12 { font-size:11px; color:var(--fc-muted); }
-.fc-code    { font-size:14px; font-weight:700; color:var(--fc-blue); margin-top:2px; }
+.fc-code    { font-size:14px; font-weight:700; color:var(--fc-red); margin-top:2px; }
 .fc-city    { font-size:11px; color:var(--fc-muted); max-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .fc-date-sm { font-size:11px; color:var(--fc-muted); margin-top:2px; }
 .fc-next-day { color:var(--fc-red); font-weight:700; font-size:11px; }
@@ -816,16 +819,16 @@ export default {
 .fc-dot-dep { background:var(--fc-green); }
 .fc-dot-arr { background:var(--fc-blue); }
 .fc-dashes { flex:1; border-top:2px dashed #d1d5db; }
-.fc-plane-icon { font-size:14px; color:var(--fc-blue); }
+.fc-plane-icon { font-size:14px; color:var(--fc-red); }
 .fc-stops-badge { font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; margin-top:2px; }
 .fc-direct { background:#dcfce7; color:var(--fc-green); }
 .fc-stop   { background:#fef3c7; color:var(--fc-orange); }
 .fc-fi-item { display:inline-flex; align-items:center; gap:3px; font-size:10px; color:#64748b; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:2px 7px; white-space:nowrap; }
 .fc-fi-item i { font-size:9px; opacity:.7; }
-.fc-fi-fn    { color:var(--fc-blue); border-color:#bfdbfe; background:#eff6ff; font-weight:600; }
+.fc-fi-fn    { color:var(--fc-red); border-color:#bfdbfe; background:#eff6ff; font-weight:600; }
 .fc-fi-cabin { color:#4b5563; font-weight:600; }
 .fc-fi-class { opacity:.7; font-weight:400; }
-.fc-fi-seats { color:var(--fc-blue); border-color:#fecaca; background:#fef2f2; font-weight:700; }
+.fc-fi-seats { color:var(--fc-red); border-color:#fecaca; background:#fef2f2; font-weight:700; }
 .fc-layovers { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
 .fc-layover-pill { display:inline-flex; align-items:center; gap:4px; font-size:11px; color:#92400e; background:#fffbeb; border:1px solid #fde68a; border-radius:20px; padding:3px 10px; }
 .fc-overnight { font-weight:700; color:var(--fc-red); }
@@ -848,14 +851,14 @@ export default {
 .fc-pb-disc { color:var(--fc-green); font-weight:600; }
 .fc-total { display:flex; flex-direction:column; align-items:flex-start; border-top:2px solid var(--fc-border); padding-top:10px; margin-top:8px; }
 .fc-total-label { font-size:11px; color:var(--fc-muted); }
-.fc-total-price { font-size:24px; font-weight:800; color:var(--fc-blue); line-height:1.2; }
+.fc-total-price { font-size:24px; font-weight:800; color:var(--fc-red); line-height:1.2; }
 .fc-total-pax   { font-size:10px; color:var(--fc-muted); }
 .fc-btns { display:flex; flex-direction:column; gap:6px; margin-top:10px; }
-.fc-book-btn { width:100%; padding:9px; background:var(--fc-red); color:#000; border: 1px solid #667cb9 ; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer; transition:background .2s; }
-.fc-book-btn:hover { background:#2f63f3; color:#fff; }
+.fc-book-btn { width:100%; padding:9px; background:var(--fc-red); color:#fff; border: 1px solid #536af0 ; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer; transition:background .2s; }
+.fc-book-btn:hover { background:#fff; color:var(--fc-red); }
 .fc-actions { display:flex; gap:6px; }
-.fc-detail-btn { flex:1; padding:7px; background:#eff6ff; color:var(--fc-blue); border:1px solid #bfdbfe; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; transition:all .2s; display:flex; align-items:center; justify-content:center; gap:4px; }
-.fc-detail-btn:hover { background:var(--fc-blue); color:#fff; }
+.fc-detail-btn { flex:1; padding:7px; background:#eff2ff; color:var(--fc-red); border:1px solid #bfc5fe; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; transition:all .2s; display:flex; align-items:center; justify-content:center; gap:4px; }
+.fc-detail-btn:hover { background:var(--fc-red); color:#fff; }
 .fc-copy-btn { width:34px; background:#f3f4f6; border:1px solid var(--fc-border); border-radius:8px; color:var(--fc-muted); font-size:13px; cursor:pointer; transition:all .2s; display:flex; align-items:center; justify-content:center; }
 .fc-copy-btn:hover { background:#e0f2fe; color:#0284c7; }
 .fc-copy-btn.copied { background:#dcfce7; color:var(--fc-green); border-color:#86efac; }

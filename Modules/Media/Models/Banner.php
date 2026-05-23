@@ -12,6 +12,8 @@ class Banner extends Model
     protected $fillable = [
         'title',
         'image_id',
+        'video',
+        'type',
         'link',
         'order',
         'status',
@@ -29,5 +31,13 @@ class Banner extends Model
     public function getImageUrl()
     {
         return get_file_url($this->image_id, 'full');
+    }
+    
+    public function getVideoUrl()
+    {
+        if ($this->video && file_exists(public_path('uploads/video/' . $this->video))) {
+            return asset('uploads/video/' . $this->video);
+        }
+        return null;
     }
 }

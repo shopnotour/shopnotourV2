@@ -1050,7 +1050,10 @@ export default {
 
             // Desktop only
             if (window.innerWidth < 992) {
-                sidebar.removeAttribute('style');
+                sidebar.style.position = '';
+                sidebar.style.top = '';
+                sidebar.style.left = '';
+                sidebar.style.width = '';
                 this.sidebarFixed = false;
                 return;
             }
@@ -1058,58 +1061,50 @@ export default {
             const scrollTop = window.pageYOffset;
             const sidebarTopGap = 100; // header spacing
             const sidebarHeight = sidebar.offsetHeight;
-
-            // Parent column positions
-            const colTop = col.offsetTop;
-
-            // Footer position
-            const footerTop = footer.offsetTop;
-
-            // Point where sidebar should stop
-            const stopPoint = footerTop - sidebarHeight - sidebarTopGap - 20;
-
-            // Sidebar width
+            
+            // Get the parent column's position relative to document
             const colRect = col.getBoundingClientRect();
+            const colTop = col.offsetTop;
+            
+            // Get footer position relative to document
+            const footerTop = footer.offsetTop;
+            
+            // Calculate where the sidebar should stop (top position when it hits the footer)
+            const stopPoint = footerTop - sidebarHeight - sidebarTopGap;
+            
+            // Get the col's left position relative to viewport for fixed positioning
+            const colLeft = colRect.left;
+            const colWidth = colRect.width;
 
-            // BEFORE sidebar fixed
-            if (scrollTop < colTop - sidebarTopGap) {
-
+            // CASE 1: Above the start point - sidebar not fixed
+            if (scrollTop + sidebarTopGap <= colTop) {
                 sidebar.style.position = '';
                 sidebar.style.top = '';
                 sidebar.style.left = '';
                 sidebar.style.width = '';
                 sidebar.style.bottom = '';
-                sidebar.style.maxHeight = '';
-                sidebar.style.overflowY = '';
-
                 this.sidebarFixed = false;
-
             }
-
-            // FIXED sidebar
-            else if (scrollTop < stopPoint) {
-
+            // CASE 2: Between start point and stop point - sidebar fixed
+            else if (scrollTop + sidebarTopGap < stopPoint) {
                 sidebar.style.position = 'fixed';
                 sidebar.style.top = sidebarTopGap + 'px';
-                sidebar.style.left = colRect.left + 'px';
-                sidebar.style.width = colRect.width + 'px';
-                sidebar.style.maxHeight = `calc(100vh - ${sidebarTopGap + 20}px)`;
-                sidebar.style.overflowY = 'auto';
-
+                sidebar.style.left = colLeft + 'px';
+                sidebar.style.width = colWidth + 'px';
+                sidebar.style.bottom = 'auto';
                 this.sidebarFixed = true;
-
             }
-
-            // FOOTER reached → absolute
+            // CASE 3: Past the stop point - sidebar absolute positioned to end before footer
             else {
-
+                // Calculate the offset from the column top
+                const distanceScrolled = scrollTop + sidebarTopGap - colTop;
+                const maxTop = stopPoint - colTop;
+                
                 sidebar.style.position = 'absolute';
-                sidebar.style.top = (stopPoint - colTop + sidebarTopGap) + 'px';
+                sidebar.style.top = maxTop + 'px';
                 sidebar.style.left = '15px';
                 sidebar.style.width = `calc(100% - 30px)`;
-                sidebar.style.maxHeight = `calc(100vh - ${sidebarTopGap + 20}px)`;
-                sidebar.style.overflowY = 'auto';
-
+                sidebar.style.bottom = 'auto';
                 this.sidebarFixed = false;
             }
         },
@@ -1469,11 +1464,17 @@ export default {
 
 /* Desktop sidebar */
 /* Add smooth transition for sidebar */
-.fsp-dsk-sidebar {
-    transition: none !important;
+/* Desktop sidebar positioning */
+.fsp-desktop-col {
+    position: relative;
 }
 
-/* Improved desktop sidebar fixed state */
+.fsp-dsk-sidebar {
+    transition: none !important;
+    will-change: transform, position;
+}
+
+/* When sidebar is fixed */
 .fsp-dsk-sidebar.fixed {
     position: fixed;
     top: 100px;
@@ -1482,6 +1483,12 @@ export default {
     z-index: 50;
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+/* When sidebar is absolute (near footer) */
+.fsp-dsk-sidebar.absolute {
+    position: absolute;
+    bottom: auto;
 }
 
 /* Custom scrollbar for better appearance */

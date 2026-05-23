@@ -31,6 +31,25 @@ class FlightBookingController extends Controller
     public function flightToCart(Request $request)
     {
         $flight      = $request->flight;
+
+        $hasDiscountRole = auth()->check() && in_array(auth()->user()->role_id, [1, 2]);
+
+        if (!$hasDiscountRole) {
+
+            // Remove discount values
+            $flight['charges_details']['segment_discount_total'] = 0;
+            $flight['flight_discount_details']['flight_discount_amount'] = 0;
+
+            // Recalculate total
+            $baseFare = $flight['price']['api_base_fare'] ?? 0;
+            $tax      = $flight['price']['api_tax'] ?? 0;
+            $ait      = $flight['charges_details']['ait_amount'] ?? 0;
+            $svc      = $flight['charges_details']['service_charge'] ?? 0;
+
+            $grossFare = $baseFare + $tax;
+
+            $flight['price']['total'] = $grossFare + $ait + $svc;
+        }
 //        return $flight;
         $reissueData = session('reissue_data');
 

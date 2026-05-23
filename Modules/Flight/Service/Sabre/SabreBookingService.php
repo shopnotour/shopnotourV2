@@ -99,21 +99,21 @@ class   SabreBookingService
 
             $appResults = $response['CreatePassengerNameRecordRS']['ApplicationResults'] ?? null;
             $status     = $appResults['status'] ?? '';
-            
+
             Log::info('ATPCO PNR Response Status', [
-    'booking_id'   => $booking->id,
-    'booking_code' => $booking->code,
-    'status'       => $status,
-    'pnr'          => $response['CreatePassengerNameRecordRS']['ItineraryRef']['ID'] ?? null,
-    'warnings'     => collect($appResults['Warning'] ?? [])
-        ->flatMap(fn($w) => collect($w['SystemSpecificResults'] ?? [])
-            ->flatMap(fn($s) => collect($s['Message'] ?? [])->pluck('content'))
-        )->filter()->values()->toArray(),
-    'errors'       => collect($appResults['Error'] ?? [])
-        ->flatMap(fn($e) => collect($e['SystemSpecificResults'] ?? [])
-            ->flatMap(fn($s) => collect($s['Message'] ?? [])->pluck('content'))
-        )->filter()->values()->toArray(),
-]);
+                    'booking_id'   => $booking->id,
+                    'booking_code' => $booking->code,
+                    'status'       => $status,
+                    'pnr'          => $response['CreatePassengerNameRecordRS']['ItineraryRef']['ID'] ?? null,
+                    'warnings'     => collect($appResults['Warning'] ?? [])
+                        ->flatMap(fn($w) => collect($w['SystemSpecificResults'] ?? [])
+                            ->flatMap(fn($s) => collect($s['Message'] ?? [])->pluck('content'))
+                        )->filter()->values()->toArray(),
+                    'errors'       => collect($appResults['Error'] ?? [])
+                        ->flatMap(fn($e) => collect($e['SystemSpecificResults'] ?? [])
+                            ->flatMap(fn($s) => collect($s['Message'] ?? [])->pluck('content'))
+                        )->filter()->values()->toArray(),
+                ]);
 
             if ($status !== 'Incomplete' && isset($response['CreatePassengerNameRecordRS']['ItineraryRef']['ID'])) {
                 break;
@@ -940,112 +940,156 @@ class   SabreBookingService
 //
 //        return $errors ?: [['type' => 'Unknown', 'code' => 'N/A', 'message' => 'Failed to create PNR']];
 //    }
+//    private function extractErrors(array $response): array
+//    {
+//        $errors = [];
+//
+//        // Check application results
+//        $appResults = $response['CreatePassengerNameRecordRS']['ApplicationResults'] ?? [];
+//        $status = $appResults['status'] ?? null;
+//
+//        // ✅ Handle Incomplete status
+//        if ($status === 'Incomplete') {
+//            // Check for errors
+//            if (isset($appResults['Error'])) {
+//                $errorList = $appResults['Error'];
+//                if (!is_array($errorList) || isset($errorList['type'])) {
+//                    $errorList = [$errorList];
+//                }
+//
+//                foreach ($errorList as $error) {
+//                    $systemResults = $error['SystemSpecificResults'] ?? [];
+//
+//                    // Handle array of system results
+//                    if (!isset($systemResults[0])) {
+//                        $systemResults = [$systemResults];
+//                    }
+//
+//                    foreach ($systemResults as $result) {
+//                        $messages = $result['Message'] ?? [];
+//
+//                        // Handle array of messages
+//                        if (!isset($messages[0])) {
+//                            $messages = [$messages];
+//                        }
+//
+//                        foreach ($messages as $message) {
+//                            if (isset($message['content'])) {
+//                                $errors[] = $message['content'];
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//
+//            // Check for warnings
+//            if (isset($appResults['Warning'])) {
+//                $warningList = $appResults['Warning'];
+//                if (!is_array($warningList) || isset($warningList['type'])) {
+//                    $warningList = [$warningList];
+//                }
+//
+//                foreach ($warningList as $warning) {
+//                    $systemResults = $warning['SystemSpecificResults'] ?? [];
+//
+//                    if (!isset($systemResults[0])) {
+//                        $systemResults = [$systemResults];
+//                    }
+//
+//                    foreach ($systemResults as $result) {
+//                        $messages = $result['Message'] ?? [];
+//
+//                        if (!isset($messages[0])) {
+//                            $messages = [$messages];
+//                        }
+//
+//                        foreach ($messages as $message) {
+//                            if (isset($message['content'])) {
+//                                $errors[] = $message['content'];
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//
+//        // ✅ Handle NotProcessed status
+//        if ($status === 'NotProcessed') {
+//            if (isset($appResults['Error'])) {
+//                $errorList = $appResults['Error'];
+//                if (!is_array($errorList) || isset($errorList['type'])) {
+//                    $errorList = [$errorList];
+//                }
+//
+//                foreach ($errorList as $error) {
+//                    $systemResults = $error['SystemSpecificResults'] ?? [];
+//
+//                    if (!isset($systemResults[0])) {
+//                        $systemResults = [$systemResults];
+//                    }
+//
+//                    foreach ($systemResults as $result) {
+//                        // Extract Message field
+//                        if (isset($result['Message'])) {
+//                            $errors[] = $result['Message'];
+//                        }
+//                        // Extract ShortText field
+//                        if (isset($result['ShortText'])) {
+//                            $errors[] = $result['ShortText'];
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//
+//        // Remove duplicates and clean
+//        $errors = array_unique(array_filter($errors));
+//
+//        return array_values($errors);
+//    }
+
     private function extractErrors(array $response): array
     {
         $errors = [];
-
-        // Check application results
         $appResults = $response['CreatePassengerNameRecordRS']['ApplicationResults'] ?? [];
-        $status = $appResults['status'] ?? null;
 
-        // ✅ Handle Incomplete status
-        if ($status === 'Incomplete') {
-            // Check for errors
-            if (isset($appResults['Error'])) {
-                $errorList = $appResults['Error'];
-                if (!is_array($errorList) || isset($errorList['type'])) {
-                    $errorList = [$errorList];
-                }
+        // Error + Warning দুটোই একসাথে handle করো
+        $sections = array_merge(
+            isset($appResults['Error'])
+                ? (isset($appResults['Error']['type']) ? [$appResults['Error']] : $appResults['Error'])
+                : [],
+            isset($appResults['Warning'])
+                ? (isset($appResults['Warning']['type']) ? [$appResults['Warning']] : $appResults['Warning'])
+                : []
+        );
 
-                foreach ($errorList as $error) {
-                    $systemResults = $error['SystemSpecificResults'] ?? [];
-
-                    // Handle array of system results
-                    if (!isset($systemResults[0])) {
-                        $systemResults = [$systemResults];
-                    }
-
-                    foreach ($systemResults as $result) {
-                        $messages = $result['Message'] ?? [];
-
-                        // Handle array of messages
-                        if (!isset($messages[0])) {
-                            $messages = [$messages];
-                        }
-
-                        foreach ($messages as $message) {
-                            if (isset($message['content'])) {
-                                $errors[] = $message['content'];
-                            }
-                        }
-                    }
-                }
+        foreach ($sections as $section) {
+            $systemResults = $section['SystemSpecificResults'] ?? [];
+            if (!isset($systemResults[0])) {
+                $systemResults = [$systemResults];
             }
 
-            // Check for warnings
-            if (isset($appResults['Warning'])) {
-                $warningList = $appResults['Warning'];
-                if (!is_array($warningList) || isset($warningList['type'])) {
-                    $warningList = [$warningList];
+            foreach ($systemResults as $result) {
+                // ✅ Message — string বা array দুটোই handle
+                $messages = $result['Message'] ?? [];
+                if (is_string($messages)) {
+                    $errors[] = $messages;
+                } else {
+                    if (!isset($messages[0])) $messages = [$messages];
+                    foreach ($messages as $msg) {
+                        if (isset($msg['content']))  $errors[] = $msg['content'];
+                        elseif (is_string($msg))     $errors[] = $msg;
+                    }
                 }
 
-                foreach ($warningList as $warning) {
-                    $systemResults = $warning['SystemSpecificResults'] ?? [];
-
-                    if (!isset($systemResults[0])) {
-                        $systemResults = [$systemResults];
-                    }
-
-                    foreach ($systemResults as $result) {
-                        $messages = $result['Message'] ?? [];
-
-                        if (!isset($messages[0])) {
-                            $messages = [$messages];
-                        }
-
-                        foreach ($messages as $message) {
-                            if (isset($message['content'])) {
-                                $errors[] = $message['content'];
-                            }
-                        }
-                    }
+                // ✅ ShortText
+                if (!empty($result['ShortText'])) {
+                    $errors[] = $result['ShortText'];
                 }
             }
         }
 
-        // ✅ Handle NotProcessed status
-        if ($status === 'NotProcessed') {
-            if (isset($appResults['Error'])) {
-                $errorList = $appResults['Error'];
-                if (!is_array($errorList) || isset($errorList['type'])) {
-                    $errorList = [$errorList];
-                }
-
-                foreach ($errorList as $error) {
-                    $systemResults = $error['SystemSpecificResults'] ?? [];
-
-                    if (!isset($systemResults[0])) {
-                        $systemResults = [$systemResults];
-                    }
-
-                    foreach ($systemResults as $result) {
-                        // Extract Message field
-                        if (isset($result['Message'])) {
-                            $errors[] = $result['Message'];
-                        }
-                        // Extract ShortText field
-                        if (isset($result['ShortText'])) {
-                            $errors[] = $result['ShortText'];
-                        }
-                    }
-                }
-            }
-        }
-
-        // Remove duplicates and clean
-        $errors = array_unique(array_filter($errors));
-
-        return array_values($errors);
+        return array_values(array_unique(array_filter($errors)));
     }
     /**
      * Log error with context

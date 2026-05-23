@@ -944,16 +944,39 @@ export default {
             this.allFlights.forEach(f => {
                 const code = f.validating_carrier;
                 if (!map[code]) {
-                    const seg = f.legs?.[0]?.segments?.[0];
+                    // validating carrier এর segment খোঁজো
+                    let matchedSeg = null;
+                    for (const leg of f.legs || []) {
+                        for (const seg of leg.segments || []) {
+                            if (seg.carrier === code) {
+                                matchedSeg = seg;
+                                break;
+                            }
+                        }
+                        if (matchedSeg) break;
+                    }
+
+                    // fallback: first segment
+                    const fallbackSeg = f.legs?.[0]?.segments?.[0];
+                    const seg = matchedSeg || fallbackSeg;
+
                     const name = seg?.carrier_name || code;
-                    map[code] = { code, name, shortName: name.split(' ').slice(0,2).join(' ').substring(0,14),
-                        logo: seg?.carrier_images?.thumb||null, cheapest: f.price?.total||0, count: 0 };
+                    const logo = seg?.carrier_images?.thumb || null;
+
+                    map[code] = {
+                        code,
+                        name,
+                        shortName: name.split(' ').slice(0, 2).join(' ').substring(0, 14),
+                        logo,
+                        cheapest: f.price?.total || 0,
+                        count: 0
+                    };
                 }
                 map[code].count++;
-                const p = f.price?.total||0;
+                const p = f.price?.total || 0;
                 if (p < map[code].cheapest) map[code].cheapest = p;
             });
-            return Object.values(map).sort((a,b)=>a.cheapest-b.cheapest);
+            return Object.values(map).sort((a, b) => a.cheapest - b.cheapest);
         },
         airlineChips() { return this.airlineOptions; },
         cheapestPrice() { return this.allFlights.length ? Math.min(...this.allFlights.map(f=>f.price?.total||0)) : 0; },
@@ -1174,7 +1197,7 @@ export default {
             window.addEventListener('scroll', this.handleScroll);
             window.addEventListener('resize', this.handleResize);
         });
-        
+
         window.addEventListener('resize', () => {
             if (window.innerWidth >= 992 && this.activeSheet) this.closeSheet();
         });
@@ -1246,7 +1269,7 @@ export default {
 .fsp-wrap {
     --fsp-blue: #1d4ed8; --fsp-accent2: #1e3a8a;
     --fsp-green: #16a34a; --fsp-red: #dc2626; --fsp-orange: #d97706; --fsp-accent: #03c5ff;
-    --fsp-border: #e5e7eb; --fsp-bg: #f8fafc; --fsp-text: #111827; --fsp-muted: #6b7280; 
+    --fsp-border: #e5e7eb; --fsp-bg: #f8fafc; --fsp-text: #111827; --fsp-muted: #6b7280;
     font-family: 'Segoe UI', system-ui, sans-serif;
     width: 100%; padding-bottom: 24px;
 }

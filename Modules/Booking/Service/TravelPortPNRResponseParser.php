@@ -1291,13 +1291,13 @@ class TravelPortPNRResponseParser
         }
 
         // ── Priority 3: AirPricingInfo.LatestTicketingTime ────────────────
-        if (empty($ticketDate)) {
-            $pricingNodes = $this->safeXpath($xml, '//air:AirPricingInfo');
-            if (!empty($pricingNodes)) {
-                $pna        = $pricingNodes[0]->attributes();
-                $ticketDate = (string) ($pna['LatestTicketingTime']    ?? $pna['TrueLastDateToTicket'] ?? '');
-            }
-        }
+//        if (empty($ticketDate)) {
+//            $pricingNodes = $this->safeXpath($xml, '//air:AirPricingInfo');
+//            if (!empty($pricingNodes)) {
+//                $pna        = $pricingNodes[0]->attributes();
+//                $ticketDate = (string) ($pna['LatestTicketingTime']    ?? $pna['TrueLastDateToTicket'] ?? '');
+//            }
+//        }
 
         // Key, type, provider from ActionStatus node
         $key          = '';
@@ -1334,7 +1334,7 @@ class TravelPortPNRResponseParser
         ];
 
         // Pattern A: BY 18MAY 2222 DAC  (or similar)
-        if (preg_match('/BY\s+(\d{1,2})(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)(\d{2,4})?\s+(\d{4})[A-Z]{3}/i', $text, $m)) {
+        if (preg_match('/BY\s+(\d{1,2})(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)(\d{2,4})?\s+(\d{4})\s+[A-Z]{3}/i', $text, $m)) {
             $day   = str_pad($m[1], 2, '0', STR_PAD_LEFT);
             $mon   = $months[strtoupper($m[2])] ?? '01';
             $year  = !empty($m[3]) ? (strlen($m[3]) === 2 ? '20'.$m[3] : $m[3]) : now()->year;

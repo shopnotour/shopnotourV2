@@ -1464,6 +1464,21 @@
             .card-body.p-0  { overflow-x: auto; }
             #bookingsDataTable { min-width: 900px; }
         }
+
+        .dropdown-menu-up {
+            top: auto !important;
+            bottom: 100% !important;
+            margin-bottom: 2px;
+        }
+
+        /* Table overflow fix */
+        .table-responsive {
+            overflow-x: auto;
+            overflow-y: visible !important;
+        }
+        .card-body.p-0 {
+            overflow: visible !important;
+        }
     </style>
 @endpush
 
@@ -1474,6 +1489,46 @@
 
     <script>
         $(document).ready(function () {
+
+
+// ✅ এটা দাও — dropdown body তে move করে
+            $(document).on('show.bs.dropdown', function (e) {
+                var dropdown = $(e.target);
+                var menu     = dropdown.find('.dropdown-menu');
+                var toggle   = dropdown.find('[data-toggle="dropdown"]');
+
+                $('body').append(menu.detach());
+
+                var offset = toggle.offset();
+                var toggleH = toggle.outerHeight();
+                var menuW   = menu.outerWidth();
+                var spaceBelow = $(window).height() - (offset.top - $(window).scrollTop()) - toggleH;
+
+                if (spaceBelow < 220) {
+                    menu.css({
+                        position : 'fixed',
+                        top      : (offset.top - $(window).scrollTop() - menu.outerHeight()) + 'px',
+                        left     : (offset.left + toggle.outerWidth() - menuW) + 'px',
+                        zIndex   : 9999,
+                        display  : 'block',
+                    });
+                } else {
+                    menu.css({
+                        position : 'fixed',
+                        top      : (offset.top - $(window).scrollTop() + toggleH) + 'px',
+                        left     : (offset.left + toggle.outerWidth() - menuW) + 'px',
+                        zIndex   : 9999,
+                        display  : 'block',
+                    });
+                }
+            }).on('hide.bs.dropdown', function (e) {
+                var menu = $(e.target).find('.dropdown-menu');
+                if (!menu.length) {
+                    // body তে আছে
+                    $('body > .dropdown-menu').remove();
+                }
+                menu.css('display', '');
+            });
 
             /* ═══════════════════════════════════════════════════
                1. SERVER-SIDE DATATABLE

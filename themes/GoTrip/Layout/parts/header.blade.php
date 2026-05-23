@@ -586,11 +586,17 @@
                                                 {{-- Shopnodhora Logo (desktop) --}}
                                                 <li style="list-style:none">
                                                     <a href="https://shopnodhora.com.bd/"
-                                                       target="_blank" rel="noopener noreferrer"
+                                                       target="_blank" rel="noopener noreferrer" 
                                                        class="ml-20">
-                                                        <img src="{{ asset('Custom_logo/SHOPNODHORA-LOGO-PNG.png') }}"
+                                                        {{-- <img src="{{ asset('Custom_logo/SHOPNODHORA-LOGO-PNG.png') }}"
                                                              alt="Mother Company"
-                                                             style="height:auto;width:auto;max-width:150px;object-fit:contain">
+                                                             style="height:auto;width:auto;max-width:150px;object-fit:contain"> --}}
+                                                        {{-- <img src="{{ asset('Custom_logo/SADL-NEW-LOGO.png') }}"
+                                                             alt="Mother Company"
+                                                             style="height:auto;width:auto;max-width:150px;object-fit:contain"> --}}
+                                                        <img src="{{ asset('Custom_logo/SADL-NEW-LOGO_2.png') }}"
+                                                             alt="Mother Company"
+                                                             style="height:auto;width:auto;max-width:85px;object-fit:contain">
                                                     </a>
                                                 </li>
 
@@ -752,7 +758,13 @@
 
         {{-- Shopnodhora Logo --}}
         <a href="https://shopnodhora.com.bd/" target="_blank" rel="noopener noreferrer">
-            <img src="{{ asset('Custom_logo/SHOPNODHORA-LOGO-PNG.png') }}"
+            {{-- <img src="{{ asset('Custom_logo/SHOPNODHORA-LOGO-PNG.png') }}"
+                 alt="Shopnodhora"
+                 style="height:26px;width:auto;max-width:75px;object-fit:contain;border-radius:3px"> --}}
+            {{-- <img src="{{ asset('Custom_logo/SADL-NEW-LOGO.png') }}"
+                 alt="Shopnodhora"
+                 style="height:26px;width:auto;max-width:75px;object-fit:contain;border-radius:3px"> --}}
+            <img src="{{ asset('Custom_logo/SADL-NEW-LOGO_2.png') }}"
                  alt="Shopnodhora"
                  style="height:26px;width:auto;max-width:75px;object-fit:contain;border-radius:3px">
         </a>

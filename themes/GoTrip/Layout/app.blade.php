@@ -902,3 +902,5 @@
 <button id="scrollTopBtn" aria-label="Scroll to top" title="Back to top">
     <i class="fas fa-chevron-up"></i>
 </button>
+
+@stack('js')

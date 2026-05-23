@@ -2013,12 +2013,6 @@
                             $tktNo3   = $pax->ticket_number ?? '';
                             $tktStat3 = strtoupper($pax->status ?? '');
 
-                            // ✅ issued/ticket copy হলে শুধু issued pax দেখাবে
-                            // booked হলে সবাই দেখাবে
-                            $isIssuedPax = !empty($tktNo3)
-                                && !in_array($tktStat3, ['TV','VOID','VOIDED','RF','RFND','REFUND','REFUNDED']);
-
-                            if (!$showFareData && !$isIssuedPax) continue; // ticket copy তে unissued skip
                         @endphp
                         <tr>
                             <td style="border:1px solid #ccc;padding:5px 8px;font-size:11px;font-weight:700;">{{ $pName3 }}</td>

@@ -502,7 +502,7 @@ class Booking extends BaseModel
 
 //        $list_booking->whereIn('object_model', array_keys(get_bookable_services()));
         $list_booking->where('object_model', 'flight');
-        return $list_booking->paginate(10);
+        return $list_booking->get();
     }
 
 

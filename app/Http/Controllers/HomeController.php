@@ -11,6 +11,7 @@ use Modules\Page\Models\Page;
 use Modules\News\Models\NewsCategory;
 use Modules\News\Models\Tag;
 use Modules\News\Models\News;
+use Modules\Media\Models\Banner; // Add this import
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
@@ -34,30 +35,63 @@ class HomeController extends Controller
 
     private function getFlightBackgroundImages()
     {
-        // "home" category এর published news এর images নিয়ে আসুন
-        $homeNews = \Modules\News\Models\News::where('status', 'publish')
-            ->whereHas('category', function($q) {
-                $q->where('slug', 'home'); // অথবা যে category চান
-            })
-            ->whereNotNull('image_id')
-            ->take(5) // সর্বোচ্চ ৫টা image
-            ->pluck('image_id')
-            ->toArray();
-
-        // Image URLs তৈরি করুন
-        $backgroundImages = array_map(function($imageId) {
-            return get_file_url($imageId, 'full'); // অথবা 'large'
-        }, $homeNews);
-
-        return array_values(array_filter($backgroundImages)); // Empty remove
+        // Get active banners from your banner system
+        $banners = Banner::where('status', 'active')
+            ->orderBy('order', 'asc')
+            ->get();
+        
+        $backgroundItems = [];
+        
+        foreach($banners as $banner) {
+            if ($banner->type == 'image' && $banner->image_id) {
+                $backgroundItems[] = [
+                    'type' => 'image',
+                    'url' => get_file_url($banner->image_id, 'full'),
+                    'title' => $banner->title,
+                    'link' => $banner->link
+                ];
+            } elseif ($banner->type == 'video' && $banner->video) {
+                $backgroundItems[] = [
+                    'type' => 'video',
+                    'url' => asset('uploads/video/' . $banner->video),
+                    'title' => $banner->title,
+                    'link' => $banner->link
+                ];
+            }
+        }
+        
+        // If no banners found, use default images
+        if (empty($backgroundItems)) {
+            $backgroundItems = [
+                [
+                    'type' => 'image',
+                    'url' => 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=1920',
+                    'title' => 'Fly with Us',
+                    'link' => null
+                ],
+                [
+                    'type' => 'image',
+                    'url' => 'https://images.unsplash.com/photo-1464037866556-6812c9d1c72e?w=1920',
+                    'title' => 'Explore the World',
+                    'link' => null
+                ],
+                [
+                    'type' => 'image',
+                    'url' => 'https://images.unsplash.com/photo-1583922178096-356c8888d746?w=1920',
+                    'title' => 'Best Deals',
+                    'link' => null
+                ],
+            ];
+        }
+        
+        return $backgroundItems;
     }
+    
     public function index()
     {
-        $flightBgImages = [
-            'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=1920',
-            'https://images.unsplash.com/photo-1464037866556-6812c9d1c72e?w=1920',
-            'https://images.unsplash.com/photo-1583922178096-356c8888d746?w=1920',
-        ];
+        // Get banners for slider (both images and videos)
+        $flightBgItems = $this->getFlightBackgroundImages();
+        
         // ✅ 1. Partners (Airlines with images)
         $partners = Airline::with('airlineImage')
             ->whereNotNull('image_id')
@@ -71,44 +105,6 @@ class HomeController extends Controller
                 ];
             });
 
-
-
-        // ✅ 2. Popular Destinations (Static for now - later you can make it dynamic)
-//        $location=Location::query();
-//        $destinations = [
-//            ['id' => 1, 'name' => 'Dubai', 'code' => 'DXB', 'price' => 599, 'image' => asset('images/destinations/dubai.jpg')],
-//            ['id' => 2, 'name' => 'London', 'code' => 'LHR', 'price' => 799, 'image' => asset('images/destinations/london.jpg')],
-//            ['id' => 3, 'name' => 'Singapore', 'code' => 'SIN', 'price' => 499, 'image' => asset('images/destinations/singapore.jpg')],
-//            ['id' => 4, 'name' => 'Bangkok', 'code' => 'BKK', 'price' => 299, 'image' => asset('images/destinations/bangkok.jpg')],
-//            ['id' => 5, 'name' => 'Kuala Lumpur', 'code' => 'KUL', 'price' => 399, 'image' => asset('images/destinations/kl.jpg')],
-//            ['id' => 6, 'name' => 'Istanbul', 'code' => 'IST', 'price' => 699, 'image' => asset('images/destinations/istanbul.jpg')],
-//            ['id' => 7, 'name' => 'New York', 'code' => 'JFK', 'price' => 999, 'image' => asset('images/destinations/newyork.jpg')],
-//            ['id' => 8, 'name' => 'Paris', 'code' => 'CDG', 'price' => 849, 'image' => asset('images/destinations/paris.jpg')],
-//        ];
-
-        // ✅ 2. Popular Destinations (From Location table)
-//        $destinations = Location::whereNotNull('image_id')
-//            ->where('status', 'publish')
-//            ->limit(8)
-//            ->get()
-//            ->map(function($location) {
-//                // Get airport code from location name or create one
-//                $code = strtoupper(substr($location->name, 0, 3));
-//
-//                // Calculate average price from bookings (optional)
-//                $avgPrice = Booking::where('arrival_airport_code', 'LIKE', "%{$code}%")
-//                    ->where('status', 'confirmed')
-//                    ->avg('total_price') ?? rand(299, 999);
-//
-//                return [
-//                    'id' => $location->id,
-//                    'name' => $location->name,
-//                    'code' => $code,
-//                    'price' => round($avgPrice),
-//                    'image' => get_file_url($location->image_id, 'large')
-//                ];
-//            });
-        $flightBgImages = $this->getFlightBackgroundImages();
         $famousDestinations = ['Dubai', 'London', 'Singapore', 'Bangkok', 'Istanbul', 'Paris', 'New York', 'Kuala Lumpur'];
 
         $destinations = Location::whereNotNull('image_id')
@@ -149,7 +145,7 @@ class HomeController extends Controller
                 ];
             });
 
-// If no locations found, use fallback
+        // If no locations found, use fallback
         if($destinations->isEmpty()) {
             $destinations = collect([
                 ['id' => 1, 'name' => 'Dubai', 'code' => 'DXB', 'price' => 599, 'image' => asset('images/destinations/dubai.jpg')],
@@ -195,11 +191,12 @@ class HomeController extends Controller
         ];
 
         return view('Page::frontend.home', compact(
+            'flightBgItems',
             'partners',
             'destinations',
             'features',
             'testimonials',
-            'stats',
+            'stats'
         ));
     }
 
@@ -246,6 +243,7 @@ class HomeController extends Controller
             ];
         })->toArray();
     }
+    
     public function indexold()
     {
         $home_page_id = setting_item('home_page_id');

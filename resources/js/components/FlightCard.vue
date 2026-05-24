@@ -975,11 +975,11 @@ export default {
 .fc-total-price { font-size:24px; font-weight:800; color:var(--fc-red); line-height:1.2; }
 .fc-total-pax   { font-size:10px; color:var(--fc-muted); }
 .fc-btns { display:flex; flex-direction:column; gap:6px; margin-top:10px; }
-.fc-book-btn { width:100%; padding:9px; background:var(--fc-red); color:#fff; border: 1px solid #536af0 ; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer; transition:background .2s; }
+.fc-book-btn { width:100%; padding:9px; background:var(--fl-accent); color:#fff; border: 1px solid #6db8f5 ; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer; transition:background .2s; }
 .fc-book-btn:hover { background:#fff; color:var(--fc-red); }
 .fc-actions { display:flex; gap:6px; }
 .fc-detail-btn { flex:1; padding:7px; background:#eff2ff; color:var(--fc-red); border:1px solid #bfc5fe; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; transition:all .2s; display:flex; align-items:center; justify-content:center; gap:4px; }
-.fc-detail-btn:hover { background:var(--fc-red); color:#fff; }
+.fc-detail-btn:hover { background:var(--fl-accent); color:#fff; }
 .fc-copy-btn { width:34px; background:#f3f4f6; border:1px solid var(--fc-border); border-radius:8px; color:var(--fc-muted); font-size:13px; cursor:pointer; transition:all .2s; display:flex; align-items:center; justify-content:center; }
 .fc-copy-btn:hover { background:#e0f2fe; color:#0284c7; }
 .fc-copy-btn.copied { background:#dcfce7; color:var(--fc-green); border-color:#86efac; }

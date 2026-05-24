@@ -105,7 +105,7 @@
                         <span>-৳{{ formatPrice(segmentDiscount) }}</span>
                     </div>
                     <div
-                        v-if="discountVisible && otherDiscount > 0 && canShowDiscount"
+                        v-if="shouldShowDiscountRow"
                         class="fc-pb-row fc-pb-disc"
                     >
                         <span><i class="fa fa-tag"></i> Discount<span v-if="flight.charges_details.flight_discount_label" class="fc-pb-pct"> ({{ flight.charges_details.flight_discount_label }})</span></span>
@@ -200,7 +200,7 @@
                     <div class="fc-ps-row fc-ps-sub"><span>= Subtotal</span><span>৳{{ formatPrice(subtotalBeforeDiscount) }}</span></div>
                 </template>
                 <div v-if="segmentDiscount > 0 && isLoggedIn" class="fc-pb-row fc-pb-disc"><span><i class="fa fa-tag"></i> Segment Discount</span><span>-৳{{ formatPrice(segmentDiscount) }}</span></div>
-                <div v-if="discountVisible && otherDiscount > 0 && canShowDiscount" class="fc-pb-row fc-pb-disc"><span><i class="fa fa-tag"></i> Discount</span><span>-৳{{ formatPrice(otherDiscount) }}</span></div>
+                <div v-if="shouldShowDiscountRow" class="fc-pb-row fc-pb-disc"><span><i class="fa fa-tag"></i> Discount</span><span>-৳{{ formatPrice(otherDiscount) }}</span></div>
                 <div class="fc-ps-total"><span>You Pay</span><span>৳{{
                         formatPrice(
                             isLoggedIn
@@ -332,7 +332,7 @@
                                 <template v-if="flight.charges_details && +flight.charges_details.service_charge"><div class="fc-cr fc-cr-add"><span>+ Service Charge</span><span>৳{{ formatPrice(flight.charges_details.service_charge) }}</span></div></template>
                                 <div v-if="hasCharges" class="fc-cr fc-cr-sub"><span>= Subtotal</span><span>৳{{ formatPrice(subtotalBeforeDiscount) }}</span></div>
                                 <div v-if="segmentDiscount > 0 && isLoggedIn" class="fc-pb-row fc-pb-disc"><span><i class="fa fa-tag"></i> Segment Disc.</span><span>-৳{{ formatPrice(segmentDiscount) }}</span></div>
-                                <div v-if="discountVisible && otherDiscount > 0 && canShowDiscount" class="fc-pb-row fc-pb-disc"><span><i class="fa fa-tag"></i> Discount</span><span>-৳{{ formatPrice(otherDiscount) }}</span></div>
+                                <div v-if="shouldShowDiscountRow" class="fc-pb-row fc-pb-disc"><span><i class="fa fa-tag"></i> Discount</span><span>-৳{{ formatPrice(otherDiscount) }}</span></div>
                                 <div class="fc-cr fc-cr-total">
                                     <span><strong>You Pay</strong></span>
                                     <span>৳{{ formatPrice(finalPrice) }}</span>
@@ -620,7 +620,8 @@ export default {
         return {
             isLoggedIn: window.isLoggedIn === true,
             roleId: window.userRoleId,
-            discountVisible: this.showDiscount,
+            // For roleId = 3, discount should always be visible
+            discountVisible: Number(window.userRoleId) === 3 ? true : this.showDiscount,
             showModal: false,
             showError: false,
             errorMessage: '',
@@ -648,20 +649,48 @@ export default {
         subtotalBeforeDiscount() { return this.grossFare + (Number(this.flight.charges_details?.ait_amount) || 0) + (Number(this.flight.charges_details?.service_charge) || 0); },
         segmentDiscount() { return Number(this.flight.charges_details?.segment_discount_total) || 0; },
         otherDiscount()   { return Number(this.flight.flight_discount_details?.flight_discount_amount) || 0; },
+        
         canShowDiscount() {
-            return this.isLoggedIn && [1, 2].includes(Number(this.roleId));
+            // Role ID 3: Hide the eye button
+            if (this.isLoggedIn && Number(this.roleId) === 3) {
+                return false;
+            }
+            // Other logged-in users: show eye button
+            return this.isLoggedIn && Number(this.roleId) !== 3;
         },
+        
+        // Check if discount row should be visible in breakdown
+        shouldShowDiscountRow() {
+            if (!this.isLoggedIn) return false;
+            
+            // For roleId = 3, always show discount row if discount exists
+            if (Number(this.roleId) === 3) {
+                return this.otherDiscount > 0;
+            }
+            
+            // For other roles, respect the eye button toggle
+            return this.discountVisible && this.otherDiscount > 0;
+        },
+        
         finalPrice() {
             if (!this.isLoggedIn) {
                 return Number(this.subtotalBeforeDiscount) || 0;
             }
 
-            // Hide discount
+            // For roleId = 3, ALWAYS apply discount
+            if (Number(this.roleId) === 3) {
+                return (
+                    (Number(this.subtotalBeforeDiscount) || 0)
+                    - (Number(this.segmentDiscount) || 0)
+                    - (Number(this.otherDiscount) || 0)
+                );
+            }
+
+            // For other roles, respect the eye button toggle
             if (!this.discountVisible) {
                 return Number(this.subtotalBeforeDiscount) || 0;
             }
 
-            // Show discount
             return (
                 (Number(this.subtotalBeforeDiscount) || 0)
                 - (Number(this.segmentDiscount) || 0)
@@ -865,7 +894,6 @@ export default {
                 }
             });
         }
-
     }
 };
 </script>

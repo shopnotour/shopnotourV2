@@ -1041,7 +1041,7 @@ export default {
 ═══════════════════════════════ */
 .fsb-wrap {
     --fsb-blue:   #1d4ed8;
-    --fsb-blue2:  #1e3a8a;
+    --fsb-blue2:  #03c5ff;
     --fsb-green:  #16a34a;
     --fsb-red:    #dc2626;
     --fsb-orange: #d97706;
@@ -1298,7 +1298,7 @@ export default {
 }
 .fsb-apply-btn {
     width: 100%; padding: 11px;
-    background: var(--fsb-blue); color: #fff;
+    background: var(--fsb-blue2); color: #fff;
     border: none; border-radius: 10px;
     font-size: 13px; font-weight: 700; cursor: pointer;
     display: flex; align-items: center; justify-content: center; gap: 6px;

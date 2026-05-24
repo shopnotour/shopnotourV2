@@ -51,7 +51,7 @@
                 <div class="ml-auto">
                     <button
                         class="group flex items-center justify-center gap-2 px-1 py-1 md:px-6 md:py-3
-                            bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800
+                            bg-gradient-to-r from-[#26c8f9] to-[#03c5ff] hover:from-[#03c5ff] hover:to-[#2bc7e6]
                             text-white font-semibold rounded-full shadow-md hover:shadow-lg
                             transition-all duration-300 transform hover:scale-105"
                         @click.stop="toggleSearchForm"

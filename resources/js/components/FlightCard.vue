@@ -153,11 +153,33 @@
         <div class="fc-mobile-price">
             <div class="fc-mp-left" @click="showPriceSheet = !showPriceSheet">
                 <div class="fc-mp-price-row">
-                    <span class="fc-mp-price">৳{{ formatPrice(isLoggedIn ? flight.price.total : subtotalBeforeDiscount) }}</span>
+                    <span class="fc-mp-price">
+                        ৳{{
+                            formatPrice(
+                                isLoggedIn
+                                    ? (
+                                        discountVisible
+                                            ? flight.price.total
+                                            : subtotalBeforeDiscount
+                                    )
+                                    : subtotalBeforeDiscount
+                            )
+                        }}
+                    </span>
                     <span class="fc-mp-pax">/ person</span>
                 </div>
                 <div class="fc-mp-breakdown-hint"><i class="fa fa-receipt"></i> View breakdown <i class="fa" :class="showPriceSheet ? 'fa-chevron-down' : 'fa-chevron-up'"></i></div>
             </div>
+            <span
+                v-if="canShowDiscount"
+                @click="discountVisible = !discountVisible"
+                style="cursor:pointer;"
+            >
+                <i
+                    :class="discountVisible ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'"
+                    style="color:red;"
+                ></i>
+            </span>
             <div class="fc-mp-right">
                 <button @click="openModal" class="fc-mp-detail"><i class="fa fa-list"></i></button>
                 <button @click="copyFlightDetails" class="fc-mp-copy" :class="{ copied: isCopied }"><i :class="isCopied ? 'fa fa-check' : 'fa fa-copy'"></i></button>
@@ -724,53 +746,124 @@ export default {
         },
 
         bookFlight(event) {
+            // Check if user is logged in
             if (!window.isLoggedIn) {
-                try { new bootstrap.Modal(document.getElementById('login')).show(); }
-                catch { document.querySelector('[data-bs-target="#login"]')?.click(); }
+                // Open the login modal from your header
+                try {
+                    // Method 1: Find and click the login button that triggers the modal
+                    const loginTriggerBtn = document.querySelector('[data-bs-toggle="modal"][href="#login"]');
+                    if (loginTriggerBtn) {
+                        loginTriggerBtn.click();
+                        console.log('Login modal triggered via button click');
+                        return;
+                    }
+                    
+                    // Method 2: Find the login modal element and use Bootstrap's Modal API
+                    const loginModalElement = document.getElementById('login');
+                    if (loginModalElement) {
+                        // Check if Bootstrap is available
+                        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                            const modal = new bootstrap.Modal(loginModalElement);
+                            modal.show();
+                            console.log('Login modal shown via Bootstrap API');
+                            return;
+                        }
+                        
+                        // Method 3: jQuery fallback (if your project uses jQuery)
+                        if (typeof $ !== 'undefined' && $.fn && $.fn.modal) {
+                            $('#login').modal('show');
+                            console.log('Login modal shown via jQuery');
+                            return;
+                        }
+                        
+                        // Method 4: Manual show if Bootstrap/jQuery not available
+                        loginModalElement.classList.add('show');
+                        loginModalElement.style.display = 'block';
+                        document.body.classList.add('modal-open');
+                        
+                        // Add backdrop if not exists
+                        let backdrop = document.querySelector('.modal-backdrop');
+                        if (!backdrop) {
+                            backdrop = document.createElement('div');
+                            backdrop.className = 'modal-backdrop fade show';
+                            document.body.appendChild(backdrop);
+                        }
+                        console.log('Login modal shown manually');
+                        return;
+                    }
+                    
+                    // Final fallback: redirect to login page
+                    console.warn('Could not open modal, redirecting to login page');
+                    window.location.href = '/login';
+                    
+                } catch (error) {
+                    console.error('Error opening login modal:', error);
+                    // Fallback to redirect
+                    window.location.href = '/login';
+                }
                 return;
             }
+            
+            // Rest of your existing booking logic for logged-in users...
             const btn = event?.currentTarget;
-            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Processing…'; }
+            if (btn) { 
+                btn.disabled = true; 
+                btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Processing…'; 
+            }
 
             fetch('flight/flightToCart', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '' 
+                },
                 body: JSON.stringify({ flight: this.flight, service: 'flight' })
             })
-                .then(r => r.json())
-                .then(data => {
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = data.redirect_url;
+                    return;
+                }
 
-                    if (data.success) {
-                        window.location.href = data.redirect_url;
-                        return;
+                if (data.air_arabia || data.sabre_price) {
+                    this.airArabiaModalData = data;
+                    this.airArabiaModalSource = data.air_arabia ? 'Air Arabia'
+                        : (data.data?.is_ndc ? 'NDC' : 'Sabre');
+                    this.airArabiaModalTab = 'price';
+                    this.showAirArabiaModal = true;
+                    if (btn) { 
+                        btn.disabled = false; 
+                        btn.innerHTML = '<i class="fa fa-bolt"></i> Book Now'; 
                     }
+                    return;
+                }
 
-                    // ✅ KEY FIX: NDC check করো data.data.is_ndc থেকে
-                    if (data.air_arabia || data.sabre_price) {
-                        this.airArabiaModalData = data;
-                        this.airArabiaModalSource = data.air_arabia ? 'Air Arabia'
-                            : (data.data?.is_ndc ? 'NDC' : 'Sabre');
-                        this.airArabiaModalTab = 'price';
-                        this.showAirArabiaModal = true;
-                        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa fa-bolt"></i> Book Now'; }
-                        return;
-                    }
-
-                    if (data.price_changed) {
-                        this.showError = true;
-                        this.errorMessage = 'মূল্য পরিবর্তন হয়েছে। পুরনো মূল্য: ৳' + data.old_price + ' → নতুন মূল্য: ৳' + data.new_api_price + '। অনুগ্রহ করে নতুন করে সার্চ করুন।';
-                        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa fa-bolt"></i> Book Now'; }
-                        return;
-                    }
-
+                if (data.price_changed) {
                     this.showError = true;
-                    this.errorMessage = data.message || 'এই ফ্লাইটটি এই মুহূর্তে বুক করা সম্ভব হচ্ছে না। আবার চেষ্টা করুন।';
-                    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa fa-bolt"></i> Book Now'; }
-                })
-                .catch(() => {
-                    alert('Something went wrong!');
-                    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa fa-bolt"></i> Book Now'; }
-                });
+                    this.errorMessage = 'মূল্য পরিবর্তন হয়েছে। পুরনো মূল্য: ৳' + data.old_price + ' → নতুন মূল্য: ৳' + data.new_api_price + '। অনুগ্রহ করে নতুন করে সার্চ করুন।';
+                    if (btn) { 
+                        btn.disabled = false; 
+                        btn.innerHTML = '<i class="fa fa-bolt"></i> Book Now'; 
+                    }
+                    return;
+                }
+
+                this.showError = true;
+                this.errorMessage = data.message || 'এই ফ্লাইটটি এই মুহূর্তে বুক করা সম্ভব হচ্ছে না। আবার চেষ্টা করুন।';
+                if (btn) { 
+                    btn.disabled = false; 
+                    btn.innerHTML = '<i class="fa fa-bolt"></i> Book Now'; 
+                }
+            })
+            .catch((error) => {
+                console.error('Booking error:', error);
+                alert('Something went wrong!');
+                if (btn) { 
+                    btn.disabled = false; 
+                    btn.innerHTML = '<i class="fa fa-bolt"></i> Book Now'; 
+                }
+            });
         }
 
     }
@@ -871,7 +964,7 @@ export default {
 .fc-ps-sub { font-weight:700; color:var(--fc-text); background:#f8fafc; margin:2px -14px; padding:5px 14px; border-top:1px solid var(--fc-border); border-bottom:1px solid var(--fc-border); }
 .fc-ps-charge { color:#92400e; }
 .fc-ps-total { display:flex; justify-content:space-between; align-items:center; background:#eff6ff; margin:8px -14px 10px; padding:10px 14px; font-size:15px; font-weight:800; color:var(--fc-blue); }
-.fc-ps-book { width:100%; padding:11px; background:var(--fc-red); color:#000; border:none; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; }
+.fc-ps-book { width:100%; padding:11px; background:var(--fc-red); color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; }
 .fc-sheet-enter-active,.fc-sheet-leave-active { transition:all .22s ease; overflow:hidden; }
 .fc-sheet-enter-from,.fc-sheet-leave-to { opacity:0; max-height:0; }
 .fc-sheet-enter-to,.fc-sheet-leave-from { opacity:1; max-height:500px; }

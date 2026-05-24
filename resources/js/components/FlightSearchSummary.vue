@@ -136,9 +136,43 @@ export default {
         },
         
         toggleSearchForm() {
-            const toggleBtn = document.getElementById('searchToggleBtn');
-            if (toggleBtn) {
-                toggleBtn.click(); // Trigger the existing toggle button
+            const section = document.getElementById('searchFormSection');
+
+            if (!section) return;
+
+            const isActive = section.classList.toggle('active');
+
+            this.isFormVisible = isActive;
+
+            // Update hidden button UI if exists
+            const chevron = document.getElementById('chevronIcon');
+            const btnText = document.querySelector('#searchToggleBtn span');
+
+            if (chevron) {
+                chevron.style.transform = isActive
+                    ? 'rotate(180deg)'
+                    : 'rotate(0deg)';
+            }
+
+            if (btnText) {
+                btnText.textContent = isActive
+                    ? 'Hide Search'
+                    : 'Search Flights';
+            }
+
+            // Dispatch global event
+            document.dispatchEvent(
+                new CustomEvent('searchFormToggled', {
+                    detail: { isVisible: isActive }
+                })
+            );
+
+            // Close flatpickr when collapsing
+            if (!isActive) {
+                document.querySelectorAll('.flatpickr-calendar')
+                    .forEach(cal => {
+                        cal.style.display = 'none';
+                    });
             }
         }
     }
